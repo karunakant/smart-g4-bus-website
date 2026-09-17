@@ -1,0 +1,43 @@
+services:
+  mqtt-broker:
+    image: eclipse-mosquitto:2.0
+    container_name: smartbusg4-mqtt-broker
+    restart: unless-stopped
+    ports:
+      - "1883:1883" # Standard MQTT TCP Port
+      - "9001:9001" # MQTT WebSockets Port
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  smartbusg4-node:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smartbusg4-node-app
+    restart: unless-stopped
+    depends_on:
+      - mqtt-broker
+    network_mode: host
+    environment:
+      - PORT=6080
+      - EXTERNAL_PORT=80
+      - HOST_IP=192.168.0.205
+      - UDP_PORT=6000
+      - GATEWAY_IP=192.168.0.200
+      - ZAUDIO_IP=192.168.0.200
+      - MQTT_BROKER_URL=mqtt://127.0.0.1:1883
+      - NODE_ENV=production
+    volumes:
+      - ./data:/app/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -1,0 +1,27 @@
+{
+  "name": "smartbusg4-home-automation",
+  "version": "1.0.0",
+  "description": "SmartBus G4 & Z-Audio Home Automation Server and Web App for ZAudio RSIP",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "smartbus",
+    "g4",
+    "hdl-buspro",
+    "z-audio",
+    "home-automation",
+    "zaudio-rsip",
+    "smart-home"
+  ],
+  "author": "Antigravity AI",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "mqtt": "^5.5.0",
+    "ws": "^8.17.1"
+  }
+}

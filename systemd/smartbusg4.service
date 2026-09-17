@@ -1,0 +1,19 @@
+[Unit]
+Description=SmartBus G4 & Z-Audio Home Automation ZAudio RSIP Server
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/smartbusG4_HomeAutomation
+ExecStart=/usr/bin/node /home/pi/smartbusG4_HomeAutomation/server.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=UDP_PORT=6000
+Environment=GATEWAY_IP=192.168.0.200
+Environment=ZAUDIO_IP=192.168.0.200
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartBus G4 & Z-Audio Home Automation</title>
+  <meta name="description" content="ZAudio RSIP Hosted Home Automation Dashboard for SmartBus G4 (HDL Buspro), Z-Audio Multi-Zone Controller (192.168.0.200), and Amazon Alexa Voice Control">
+  
+  <!-- Google Fonts & Phosphor Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">
+          <i class="ph-bold ph-lightning"></i>
+        </div>
+        <div class="brand-text">
+          <h1>SmartBus G4</h1>
+          <span>ZAudio RSIP Gateway</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="tab-overview" id="nav-overview">
+          <i class="ph-bold ph-squares-four"></i>
+          <span>Overview</span>
+        </button>
+        <button class="nav-item" data-tab="tab-zaudio" id="nav-zaudio">
+          <i class="ph-bold ph-speaker-high"></i>
+          <span>Z-Audio Controller</span>
+          <span class="badge-dot" id="zaudio-badge"></span>
+        </button>
+        <button class="nav-item" data-tab="tab-lighting" id="nav-lighting">
+          <i class="ph-bold ph-lightbulb"></i>
+          <span>Lighting & Fans</span>
+        </button>
+        <button class="nav-item" data-tab="tab-climate" id="nav-climate">
+          <i class="ph-bold ph-thermometer-cold"></i>
+          <span>Climate & HVAC</span>
+        </button>
+        <button class="nav-item" data-tab="tab-scenes" id="nav-scenes">
+          <i class="ph-bold ph-sparkles"></i>
+          <span>Scenes & Curtains</span>
+        </button>
+        <button class="nav-item" data-tab="tab-scanner" id="nav-scanner">
+          <i class="ph-bold ph-radar"></i>
+          <span>Scanner & Setup</span>
+        </button>
+        <button class="nav-item" data-tab="tab-alexa" id="nav-alexa">
+          <i class="ph-bold ph-microphone-stage"></i>
+          <span>Alexa Voice Control</span>
+        </button>
+        <button class="nav-item" data-tab="tab-bus" id="nav-bus">
+          <i class="ph-bold ph-terminal-window"></i>
+          <span>UDP Packet Inspector</span>
+        </button>
+        <button class="nav-item" data-tab="tab-queue" id="nav-queue">
+          <i class="ph-bold ph-tray"></i>
+          <span>Queue & MQTT Service</span>
+          <span class="badge-dot yellow" id="queue-badge-dot"></span>
+        </button>
+        <button class="nav-item" data-tab="tab-settings" id="nav-settings">
+          <i class="ph-bold ph-gear-six"></i>
+          <span>System Settings</span>
+        </button>
+      </nav>
+
+      <!-- Hardware Status Card -->
+      <div class="sidebar-status">
+        <div class="status-header">
+          <span class="status-title">Hardware Gateway</span>
+          <span class="pulse-indicator online" id="sys-status-indicator"></span>
+        </div>
+        <div class="status-item">
+          <span class="label">Host</span>
+          <span class="val">ZAudio RSIP</span>
+        </div>
+        <div class="status-item">
+          <span class="label">Gateway IP</span>
+          <span class="val highlight" id="sidebar-gateway-ip">192.168.0.200</span>
+        </div>
+        <div class="status-item">
+          <span class="label">Alexa Discovery</span>
+          <span class="val highlight">Active (SSDP)</span>
+        </div>
+        <div class="status-item">
+          <span class="label">S-Bus UDP</span>
+          <span class="val">Port 6000</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- Topbar Header -->
+      <header class="topbar">
+        <div class="header-title">
+          <h2 id="page-title">Home Dashboard</h2>
+          <p id="page-subtitle">Real-time control for SmartBus G4, Z-Audio & Alexa equipment</p>
+        </div>
+
+        <div class="quick-scenes">
+          <button class="scene-chip" onclick="triggerQuickScene('scene_morning')" title="Good Morning">
+            <i class="ph-bold ph-sun"></i> Morning
+          </button>
+          <button class="scene-chip" onclick="triggerQuickScene('scene_cinema')" title="Cinema Evening">
+            <i class="ph-bold ph-film-strip"></i> Cinema
+          </button>
+          <button class="scene-chip" onclick="triggerQuickScene('scene_party')" title="Party Mode">
+            <i class="ph-bold ph-sparkles"></i> Party
+          </button>
+          <button class="scene-chip danger" onclick="triggerQuickScene('scene_night')" title="Turn OFF All Equipment">
+            <i class="ph-bold ph-power"></i> All Off
+          </button>
+        </div>
+      </header>
+
+      <div class="content-body">
+        
+        <!-- TAB 1: OVERVIEW -->
+        <section class="tab-page active" id="tab-overview">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon yellow"><i class="ph-bold ph-lightbulb"></i></div>
+              <div class="stat-info">
+                <span class="stat-value" id="stat-active-lights">6 / 9</span>
+                <span class="stat-label">Active Lights & Fans</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon purple"><i class="ph-bold ph-speaker-high"></i></div>
+              <div class="stat-info">
+                <span class="stat-value" id="stat-active-zones">2 Active</span>
+                <span class="stat-label">Z-Audio Zones</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon blue"><i class="ph-bold ph-thermometer-cold"></i></div>
+              <div class="stat-info">
+                <span class="stat-value" id="stat-current-temp">24.5 °C</span>
+                <span class="stat-label">Living Room Climate</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon green"><i class="ph-bold ph-microphone"></i></div>
+              <div class="stat-info">
+                <span class="stat-value">Alexa Ready</span>
+                <span class="stat-label">Voice Control Bridge</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="dashboard-grid">
+            <!-- Z-Audio Quick Player Widget -->
+            <div class="glass-card widget-zaudio-overview">
+              <div class="card-header">
+                <h3><i class="ph-bold ph-music-notes"></i> Z-Audio Main Controller</h3>
+                <span class="ip-tag">192.168.0.200</span>
+              </div>
+              <div class="overview-player">
+                <div class="album-art">
+                  <i class="ph-bold ph-disc"></i>
+                </div>
+                <div class="player-details">
+                  <div class="track-title" id="overview-track">Acoustic Sunset - Live Session</div>
+                  <div class="track-artist" id="overview-artist">Source: Bluetooth (Zone 1)</div>
+                  <div class="player-controls">
+                    <button class="btn-icon" onclick="controlZAudioQuick('prev')"><i class="ph-bold ph-skip-back"></i></button>
+                    <button class="btn-icon play-btn" id="overview-play-btn" onclick="toggleOverviewPlayback()"><i class="ph-bold ph-play"></i></button>
+                    <button class="btn-icon" onclick="controlZAudioQuick('next')"><i class="ph-bold ph-skip-forward"></i></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Favorite Lighting Quick Switches -->
+            <div class="glass-card">
+              <div class="card-header">
+                <h3><i class="ph-bold ph-toggle-left"></i> Quick Lighting & Fan Switches</h3>
+              </div>
+              <div class="quick-switches-list" id="quick-lighting-container">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 2: Z-AUDIO CONTROLLER -->
+        <section class="tab-page" id="tab-zaudio">
+          <div class="zaudio-banner">
+            <div class="zaudio-banner-info">
+              <h2>HDL Z-Audio Multi-Zone Music Controller</h2>
+              <p>Gateway Target: <strong id="zaudio-target-ip-display">192.168.0.200</strong> &bull; Subnet: 1 &bull; Device ID: 50 &bull; Opcode: <code>0x192E</code></p>
+            </div>
+            <div class="zaudio-banner-badge" id="zaudio-network-status">
+              <i class="ph-bold ph-check-circle"></i> Connected (192.168.0.200)
+            </div>
+          </div>
+
+          <!-- Zone Selector Bar -->
+          <div class="zone-selector" id="zone-selector-bar">
+            <button class="zone-btn active" onclick="selectZone(1)">Zone 1: Living Room</button>
+            <button class="zone-btn" onclick="selectZone(2)">Zone 2: Master Bedroom</button>
+            <button class="zone-btn" onclick="selectZone(3)">Zone 3: Garden Terrace</button>
+            <button class="zone-btn" onclick="selectZone(4)">Zone 4: Dining Area</button>
+          </div>
+
+          <div class="zaudio-console">
+            <!-- Left Console: Media Player & Volume -->
+            <div class="glass-card console-main">
+              <div class="zone-header">
+                <h3 id="current-zone-title">Zone 1: Living Room</h3>
+                <div class="zone-power-toggle">
+                  <label class="switch-label">Zone Power</label>
+                  <input type="checkbox" id="zone-power-chk" class="toggle-switch" onchange="toggleZonePower(this.checked)">
+                </div>
+              </div>
+
+              <div class="media-display-box">
+                <div class="music-animation">
+                  <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                </div>
+                <div class="track-info">
+                  <h4 id="zaudio-track-title">Acoustic Sunset - Live Session</h4>
+                  <p id="zaudio-artist-title">Artist: Home Automation Audio &bull; Source: <span id="zaudio-source-label">Bluetooth</span></p>
+                </div>
+              </div>
+
+              <!-- Transport Control Buttons -->
+              <div class="transport-bar">
+                <button class="transport-btn" onclick="sendZAudioAction('playback', 'prev')" title="Previous Track"><i class="ph-bold ph-skip-back"></i></button>
+                <button class="transport-btn play-main" id="zaudio-main-play-btn" onclick="toggleZAudioMainPlay()"><i class="ph-bold ph-play"></i></button>
+                <button class="transport-btn" onclick="sendZAudioAction('playback', 'stop')" title="Stop"><i class="ph-bold ph-stop"></i></button>
+                <button class="transport-btn" onclick="sendZAudioAction('playback', 'next')" title="Next Track"><i class="ph-bold ph-skip-forward"></i></button>
+              </div>
+
+              <!-- Volume Control Slider -->
+              <div class="volume-control-box">
+                <div class="volume-header">
+                  <span><i class="ph-bold ph-speaker-high"></i> Master Zone Volume</span>
+                  <span class="vol-val" id="zaudio-vol-val">45 / 79</span>
+                </div>
+                <div class="vol-slider-row">
+                  <button class="btn-icon" onclick="sendZAudioAction('mute')" title="Mute Toggle"><i class="ph-bold ph-speaker-slash" id="mute-icon"></i></button>
+                  <input type="range" min="0" max="79" value="45" class="custom-slider" id="zaudio-vol-slider" oninput="onVolumeSliderChange(this.value)">
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Console: Source & Equalizer -->
+            <div class="glass-card console-side">
+              <h3><i class="ph-bold ph-radio"></i> Audio Input Source</h3>
+              <div class="source-grid">
+                <button class="source-btn" id="src-btn-1" onclick="selectSource(1)">
+                  <i class="ph-bold ph-cardholder"></i>
+                  <span>1: SD Card</span>
+                </button>
+                <button class="source-btn" id="src-btn-2" onclick="selectSource(2)">
+                  <i class="ph-bold ph-plug-in"></i>
+                  <span>2: AUX Line-In</span>
+                </button>
+                <button class="source-btn active" id="src-btn-3" onclick="selectSource(3)">
+                  <i class="ph-bold ph-bluetooth"></i>
+                  <span>3: Bluetooth</span>
+                </button>
+                <button class="source-btn" id="src-btn-4" onclick="selectSource(4)">
+                  <i class="ph-bold ph-broadcast"></i>
+                  <span>4: Web Radio</span>
+                </button>
+                <button class="source-btn" id="src-btn-5" onclick="selectSource(5)">
+                  <i class="ph-bold ph-hard-drives"></i>
+                  <span>5: NAS Server</span>
+                </button>
+              </div>
+
+              <div class="eq-section">
+                <h3><i class="ph-bold ph-sliders"></i> Equalizer Preset</h3>
+                <div class="eq-chips">
+                  <button class="eq-chip active" onclick="selectEQ('Pop')">Pop</button>
+                  <button class="eq-chip" onclick="selectEQ('Rock')">Rock</button>
+                  <button class="eq-chip" onclick="selectEQ('Jazz')">Jazz</button>
+                  <button class="eq-chip" onclick="selectEQ('Classic')">Classic</button>
+                  <button class="eq-chip" onclick="selectEQ('Normal')">Normal</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 3: LIGHTING & FANS -->
+        <section class="tab-page" id="tab-lighting">
+          <div class="lighting-room-grid" id="lighting-container">
+            <!-- Dynamically populated room cards -->
+          </div>
+        </section>
+
+        <!-- TAB 4: CLIMATE & HVAC -->
+        <section class="tab-page" id="tab-climate">
+          <div class="hvac-grid" id="hvac-container">
+            <!-- Dynamically populated HVAC units -->
+          </div>
+        </section>
+
+        <!-- TAB 5: SCENES & CURTAINS -->
+        <section class="tab-page" id="tab-scenes">
+          <div class="scenes-grid-container">
+            <div class="glass-card">
+              <h3><i class="ph-bold ph-sparkles"></i> Automation Scenes</h3>
+              <div class="scenes-list" id="scenes-container">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+
+            <div class="glass-card">
+              <h3><i class="ph-bold ph-blinds"></i> Motorized Curtains & Blinds</h3>
+              <div class="curtains-list" id="curtains-container">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 6: SMARTBUS SCANNER & SETUP -->
+        <section class="tab-page" id="tab-scanner">
+          <div class="dashboard-grid">
+            <!-- Subnet Hardware Scanner -->
+            <div class="glass-card">
+              <div class="card-header">
+                <h3><i class="ph-bold ph-radar"></i> SmartBus G4 Subnet Scanner</h3>
+                <button class="btn-primary" onclick="startSubnetScan()"><i class="ph-bold ph-magnifying-glass"></i> Scan Subnet 1</button>
+              </div>
+
+              <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+                Sends a broadcast discovery frame (Opcode <code>0x000E</code>) on UDP port 6000 to scan for online SmartBus G4 relay modules, dimmers, fan controllers, HVAC modules, and Z-Audio hardware.
+              </p>
+
+              <div id="scanner-results-list" class="quick-switches-list">
+                <div class="device-row">
+                  <div class="device-info">
+                    <div class="device-icon on"><i class="ph-bold ph-check-circle"></i></div>
+                    <div>
+                      <div style="font-weight:600">Scan Ready</div>
+                      <div style="font-size:12px;color:var(--text-muted)">Click "Scan Subnet 1" to discover bus hardware</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Add Custom Light / Fan Switch Form -->
+            <div class="glass-card">
+              <h3><i class="ph-bold ph-plus-circle"></i> Add Equipment / Switch</h3>
+              
+              <form id="add-device-form" onsubmit="handleAddDevice(event)" style="margin-top:16px">
+                <div class="form-group">
+                  <label for="new-dev-name">Switch / Equipment Name</label>
+                  <input type="text" id="new-dev-name" class="form-input" placeholder="e.g. Master Bedroom Fan" required>
+                </div>
+
+                <div class="form-group">
+                  <label for="new-dev-room">Room Location</label>
+                  <select id="new-dev-room" class="form-input" required>
+                    <option value="Living Room">Living Room</option>
+                    <option value="Master Bedroom">Master Bedroom</option>
+                    <option value="Kids Bedroom">Kids Bedroom</option>
+                    <option value="Kitchen & Dining">Kitchen & Dining</option>
+                    <option value="Outdoor & Balcony">Outdoor & Balcony</option>
+                    <option value="Bathroom">Bathroom</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="new-dev-type">Control Type</label>
+                  <select id="new-dev-type" class="form-input" required>
+                    <option value="fan">3-Speed Fan Switch (Low/Med/High)</option>
+                    <option value="dimmer">0-100% Light Dimmer</option>
+                    <option value="relay">On/Off Light Switch (Relay)</option>
+                    <option value="rgb">RGB Accent Light</option>
+                  </select>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+                  <div class="form-group">
+                    <label for="new-dev-subnet">Subnet ID</label>
+                    <input type="number" id="new-dev-subnet" class="form-input" value="1" min="1" max="254" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="new-dev-deviceid">Device ID</label>
+                    <input type="number" id="new-dev-deviceid" class="form-input" value="10" min="1" max="254" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="new-dev-channel">Channel #</label>
+                    <input type="number" id="new-dev-channel" class="form-input" value="1" min="1" max="12" required>
+                  </div>
+                </div>
+
+                <button type="submit" class="btn-primary" style="width:100%;justify-content:center;margin-top:8px">
+                  <i class="ph-bold ph-plus-circle"></i> Add Equipment Switch
+                </button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 7: ALEXA VOICE CONTROL -->
+        <section class="tab-page" id="tab-alexa">
+          <div class="glass-card">
+            <div class="card-header">
+              <h3><i class="ph-bold ph-microphone-stage"></i> Amazon Alexa Smart Home Setup</h3>
+              <span class="zaudio-banner-badge"><i class="ph-bold ph-broadcast"></i> Local UPnP Bridge Active</span>
+            </div>
+
+            <div style="line-height:1.6;color:var(--text-muted);margin-bottom:24px">
+              Your SmartBus G4 Home Automation server includes a built-in <strong>Alexa Local Discovery Bridge</strong>.
+              All your SmartBus lights, fan switches, dimmers, scenes, and Z-Audio zones automatically emulate Philips Hue smart home devices on your local network.
+            </div>
+
+            <div class="stats-grid" style="margin-bottom:24px">
+              <div class="stat-card">
+                <div class="stat-icon yellow"><i class="ph-bold ph-magnifying-glass"></i></div>
+                <div class="stat-info">
+                  <span class="stat-value">"Alexa, discover devices"</span>
+                  <span class="stat-label">Voice Discovery Command</span>
+                </div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon purple"><i class="ph-bold ph-fan"></i></div>
+                <div class="stat-info">
+                  <span class="stat-value">"Alexa, turn on Master Bedroom Fan"</span>
+                  <span class="stat-label">Fan Voice Control</span>
+                </div>
+              </div>
+            </div>
+
+            <h4 style="font-family:var(--font-heading);font-size:18px;margin-bottom:12px">Supported Alexa Voice Commands</h4>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+              <div style="background:rgba(0,0,0,0.3);padding:16px;border-radius:12px;border:1px solid var(--border-color)">
+                <strong style="color:#fff"><i class="ph-bold ph-lightbulb"></i> Lighting & Fan Commands</strong>
+                <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-muted)">
+                  <li>"Alexa, turn on Living Room Chandelier"</li>
+                  <li>"Alexa, turn on Living Room Ceiling Fan"</li>
+                  <li>"Alexa, set Bedroom Main Light to 40%"</li>
+                </ul>
+              </div>
+
+              <div style="background:rgba(0,0,0,0.3);padding:16px;border-radius:12px;border:1px solid var(--border-color)">
+                <strong style="color:#fff"><i class="ph-bold ph-speaker-high"></i> Z-Audio Commands</strong>
+                <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-muted)">
+                  <li>"Alexa, turn on Z-Audio Living Room"</li>
+                  <li>"Alexa, set Z-Audio Living Room to 50%"</li>
+                  <li>"Alexa, turn off Z-Audio Master Bedroom"</li>
+                </ul>
+              </div>
+
+              <div style="background:rgba(0,0,0,0.3);padding:16px;border-radius:12px;border:1px solid var(--border-color)">
+                <strong style="color:#fff"><i class="ph-bold ph-sparkles"></i> Automation Scenes</strong>
+                <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-muted)">
+                  <li>"Alexa, turn on Good Morning"</li>
+                  <li>"Alexa, turn on Cinema Mode"</li>
+                  <li>"Alexa, turn on Party Lounge"</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 8: UDP PACKET INSPECTOR -->
+        <section class="tab-page" id="tab-bus">
+          <div class="glass-card">
+            <div class="card-header">
+              <h3><i class="ph-bold ph-terminal"></i> SmartBus G4 Live UDP Traffic Inspector</h3>
+              <div class="inspector-controls">
+                <button class="btn-secondary" onclick="clearLogs()"><i class="ph-bold ph-trash"></i> Clear Log</button>
+                <button class="btn-primary" onclick="injectTestUDP()"><i class="ph-bold ph-paper-plane-tilt"></i> Send Test Frame</button>
+              </div>
+            </div>
+
+            <div class="log-console" id="log-console">
+              <div class="log-entry system">
+                <span class="time">[System]</span> SmartBus UDP Packet Logger Initialized on Port 6000...
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 9: QUEUE & MQTT SERVICE -->
+        <section class="tab-page" id="tab-queue">
+          <div class="stats-grid" style="margin-bottom:24px">
+            <div class="stat-card">
+              <div class="stat-icon green" id="stat-mqtt-icon"><i class="ph-bold ph-broadcast"></i></div>
+              <div class="stat-info">
+                <span class="stat-value" id="stat-mqtt-status">Connecting...</span>
+                <span class="stat-label">MQTT Broker Connection</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon yellow"><i class="ph-bold ph-tray"></i></div>
+              <div class="stat-info">
+                <span class="stat-value" id="stat-queue-length">0 Jobs</span>
+                <span class="stat-label">Commands Pending Queue</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon blue"><i class="ph-bold ph-check-circle"></i></div>
+              <div class="stat-info">
+                <span class="stat-value" id="stat-queue-processed">0</span>
+                <span class="stat-label">Total Executed Commands</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon purple"><i class="ph-bold ph-clock-counter-clockwise"></i></div>
+              <div class="stat-info">
+                <span class="stat-value" id="stat-queue-delay">100 ms</span>
+                <span class="stat-label">Inter-Command Throttle</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="dashboard-grid" style="margin-bottom:24px">
+            <!-- Queue Control Panel -->
+            <div class="glass-card">
+              <div class="card-header">
+                <h3><i class="ph-bold ph-sliders-horizontal"></i> Queue Service Control Engine</h3>
+                <div class="inspector-controls">
+                  <button class="btn-secondary" id="btn-toggle-pause" onclick="toggleQueuePause()"><i class="ph-bold ph-pause"></i> Pause Queue</button>
+                  <button class="btn-secondary danger" onclick="purgeQueue()"><i class="ph-bold ph-trash"></i> Purge Queue</button>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-top:16px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                  <label for="queue-delay-slider" style="margin:0"><i class="ph-bold ph-timer"></i> Throttle Delay Between Commands (protects S-Bus UDP)</label>
+                  <span style="font-weight:700;color:var(--primary-color)" id="queue-delay-display">100 ms</span>
+                </div>
+                <input type="range" id="queue-delay-slider" min="10" max="1000" step="10" value="100" class="custom-slider" onchange="updateQueueDelay(this.value)">
+                <small style="color:var(--text-muted)">Prevents command packet collisions on SmartBus G4 Ethernet Gateway 192.168.0.200</small>
+              </div>
+
+              <hr style="border:none;border-top:1px solid var(--border-color);margin:20px 0">
+
+              <h4 style="font-family:var(--font-heading);font-size:16px;margin-bottom:12px"><i class="ph-bold ph-paper-plane-tilt"></i> Dispatch Synthetic Priority Command</h4>
+              <form id="enqueue-test-form" onsubmit="handleTestEnqueue(event)" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end">
+                <div class="form-group" style="margin:0">
+                  <label for="test-cmd-type" style="font-size:12px">Target Device ID</label>
+                  <input type="text" id="test-cmd-id" class="form-input" placeholder="e.g. dev_1" value="dev_1" required>
+                </div>
+                <div class="form-group" style="margin:0">
+                  <label for="test-cmd-action" style="font-size:12px">Action / State</label>
+                  <select id="test-cmd-action" class="form-input">
+                    <option value="ON">Turn ON (100%)</option>
+                    <option value="OFF">Turn OFF (0%)</option>
+                    <option value="50">Dim to 50%</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin:0">
+                  <label for="test-cmd-priority" style="font-size:12px">Priority Level</label>
+                  <select id="test-cmd-priority" class="form-input">
+                    <option value="HIGH">HIGH Priority</option>
+                    <option value="NORMAL" selected>NORMAL Priority</option>
+                    <option value="LOW">LOW Priority</option>
+                  </select>
+                </div>
+                <button type="submit" class="btn-primary"><i class="ph-bold ph-plus"></i> Enqueue</button>
+              </form>
+            </div>
+
+            <!-- MQTT Broker Configuration -->
+            <div class="glass-card">
+              <h3><i class="ph-bold ph-broadcast"></i> MQTT Broker & Home Assistant Settings</h3>
+              
+              <form id="mqtt-settings-form" onsubmit="saveMQTTConfig(event)" style="margin-top:16px">
+                <div class="form-group">
+                  <label for="mqtt-broker-url">MQTT Broker Connection URL</label>
+                  <input type="text" id="mqtt-broker-url" class="form-input" value="mqtt://localhost:1883" placeholder="mqtt://192.168.0.x:1883" required>
+                  <small>Supports local Mosquitto, EMQX, HiveMQ, or Home Assistant broker.</small>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                  <div class="form-group">
+                    <label for="mqtt-topic-prefix">Base Topic Prefix</label>
+                    <input type="text" id="mqtt-topic-prefix" class="form-input" value="smartbus" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="mqtt-client-id">Client ID</label>
+                    <input type="text" id="mqtt-client-id" class="form-input" value="smartbus-pi-1" required>
+                  </div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                  <div class="form-group">
+                    <label for="mqtt-username">Broker Username (Optional)</label>
+                    <input type="text" id="mqtt-username" class="form-input" placeholder="Optional">
+                  </div>
+                  <div class="form-group">
+                    <label for="mqtt-password">Broker Password (Optional)</label>
+                    <input type="password" id="mqtt-password" class="form-input" placeholder="Optional">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="mqtt-ha-discovery-chk" checked>
+                    <span>Publish Home Assistant Auto-Discovery Configs (<code>homeassistant/#</code>)</span>
+                  </label>
+                </div>
+
+                <button type="submit" class="btn-primary" style="width:100%;justify-content:center;margin-top:8px">
+                  <i class="ph-bold ph-floppy-disk"></i> Connect & Save MQTT Settings
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Command Queue Stream & Log Inspector -->
+          <div class="dashboard-grid">
+            <!-- Active Queue Table -->
+            <div class="glass-card">
+              <div class="card-header">
+                <h3><i class="ph-bold ph-queue"></i> Live Priority Command Queue Stream</h3>
+                <span class="badge-dot green" id="worker-status-dot"></span>
+              </div>
+              
+              <div style="overflow-x:auto;margin-top:12px">
+                <table class="queue-table" style="width:100%;border-collapse:collapse;font-size:13px">
+                  <thead>
+                    <tr style="border-bottom:1px solid var(--border-color);text-align:left;color:var(--text-muted)">
+                      <th style="padding:10px">Job ID</th>
+                      <th style="padding:10px">Type</th>
+                      <th style="padding:10px">Target</th>
+                      <th style="padding:10px">Priority</th>
+                      <th style="padding:10px">Source</th>
+                      <th style="padding:10px">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="queue-jobs-tbody">
+                    <tr>
+                      <td colspan="6" style="padding:20px;text-align:center;color:var(--text-muted)">No active commands in queue</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- MQTT Log Console -->
+            <div class="glass-card">
+              <div class="card-header">
+                <h3><i class="ph-bold ph-terminal"></i> MQTT Activity & Telemetry Feed</h3>
+              </div>
+              <div class="log-console" id="mqtt-log-console" style="height:320px">
+                <div class="log-entry system">
+                  <span class="time">[System]</span> MQTT Queue Telemetry Feed Listening...
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 10: SYSTEM SETTINGS -->
+        <section class="tab-page" id="tab-settings">
+          <div class="glass-card max-width-card">
+            <h3><i class="ph-bold ph-gear-six"></i> ZAudio RSIP & Network Configuration</h3>
+            
+            <form id="settings-form" onsubmit="saveSettings(event)">
+              <div class="form-group">
+                <label for="cfg-gateway-ip">SmartBus G4 Gateway IP Address</label>
+                <input type="text" id="cfg-gateway-ip" class="form-input" value="192.168.0.200" placeholder="e.g. 192.168.0.200">
+                <small>Enter the exact IP address of your SmartBus G4 Ethernet Gateway on your local network.</small>
+              </div>
+
+              <div class="form-group">
+                <label for="cfg-udp-port">SmartBus UDP Listening Port</label>
+                <input type="number" id="cfg-udp-port" class="form-input" value="6000" readonly>
+                <small>Standard HDL Buspro / SmartBus G4 UDP port is 6000.</small>
+              </div>
+
+              <div class="form-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="cfg-simulation-chk" checked>
+                  <span>Enable Hardware Simulator (Auto fallback if hardware disconnected)</span>
+                </label>
+              </div>
+
+              <button type="submit" class="btn-primary"><i class="ph-bold ph-floppy-disk"></i> Save Configuration</button>
+            </form>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
