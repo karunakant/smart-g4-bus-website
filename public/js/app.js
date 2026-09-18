@@ -337,70 +337,201 @@ function sendZAudioAction(type, value = null) {
 // -------------------------------------------------------------
 // Lighting & Fan Controls UI
 // -------------------------------------------------------------
+let expandedGroups = {};
+let currentLightingFilter = 'all';
+
 function renderLighting() {
   const container = document.getElementById('lighting-container');
   if (!container) return;
 
+  // Filter devices by category if selected
+  let devices = state.devices;
+  if (currentLightingFilter !== 'all') {
+    devices = devices.filter(d => d.type === currentLightingFilter);
+  }
+
+  // Group devices by Room
   const roomMap = {};
-  state.devices.forEach(dev => {
+  devices.forEach(dev => {
     if (!roomMap[dev.room]) roomMap[dev.room] = [];
     roomMap[dev.room].push(dev);
   });
 
   container.innerHTML = '';
+
+  if (Object.keys(roomMap).length === 0) {
+    container.innerHTML = `
+      <div class="glass-card" style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+        <i class="ph-bold ph-lightbulb-slash" style="font-size: 36px; color: var(--text-muted); margin-bottom: 12px; display: block;"></i>
+        <div style="font-size: 16px; font-weight: 600;">No equipment matches filter "${currentLightingFilter}"</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Click "All Rooms" above to show all lighting & fan cards.</div>
+      </div>
+    `;
+    return;
+  }
+
   Object.keys(roomMap).forEach(roomName => {
-    const roomCard = document.createElement('div');
-    roomCard.className = 'glass-card';
+    const roomDevs = roomMap[roomName];
+    const isExpanded = !!expandedGroups[roomName];
+
+    // Metrics & Active calculations
+    const activeDevs = roomDevs.filter(d => d.power);
+    const hasActive = activeDevs.length > 0;
+
+    const fanCount = roomDevs.filter(d => d.type === 'fan').length;
+    const dimmerCount = roomDevs.filter(d => d.type === 'dimmer').length;
+    const relayCount = roomDevs.filter(d => d.type === 'relay' || d.type === 'rgb').length;
+
+    let statusText = 'All Off';
+    if (hasActive) {
+      statusText = `${activeDevs.length} of ${roomDevs.length} Active`;
+    }
+
+    const isMasterOn = hasActive;
+
+    const groupCard = document.createElement('div');
+    groupCard.className = `group-card ${isExpanded ? 'is-expanded' : ''} ${hasActive ? 'has-active' : ''}`;
 
     let devRowsHTML = '';
-    roomMap[roomName].forEach(dev => {
+    roomDevs.forEach(dev => {
       let iconClass = 'ph-lightbulb';
       if (dev.type === 'fan') iconClass = 'ph-fan';
       else if (dev.type === 'rgb') iconClass = 'ph-palette';
+      else if (dev.type === 'dimmer') iconClass = 'ph-sliders';
 
       let controlHTML = '';
       if (dev.type === 'fan') {
         controlHTML = `
-          <div style="display:flex;align-items:center;gap:6px">
-            <button class="eq-chip ${dev.level === 1 ? 'active' : ''}" onclick="setDeviceLevel('${dev.id}', 1)">Low</button>
-            <button class="eq-chip ${dev.level === 2 ? 'active' : ''}" onclick="setDeviceLevel('${dev.id}', 2)">Med</button>
-            <button class="eq-chip ${dev.level === 3 ? 'active' : ''}" onclick="setDeviceLevel('${dev.id}', 3)">High</button>
+          <div class="fan-speed-chips">
+            <button class="speed-chip ${dev.level === 0 ? 'active' : ''}" onclick="setDeviceLevel('${dev.id}', 0); event.stopPropagation();">Off</button>
+            <button class="speed-chip ${dev.level === 1 ? 'active' : ''}" onclick="setDeviceLevel('${dev.id}', 1); event.stopPropagation();">Low</button>
+            <button class="speed-chip ${dev.level === 2 ? 'active' : ''}" onclick="setDeviceLevel('${dev.id}', 2); event.stopPropagation();">Med</button>
+            <button class="speed-chip ${dev.level === 3 ? 'active' : ''}" onclick="setDeviceLevel('${dev.id}', 3); event.stopPropagation();">High</button>
           </div>
         `;
       } else if (dev.type === 'dimmer') {
         controlHTML = `
-          <input type="range" min="0" max="100" value="${dev.level}" class="custom-slider" style="width:100px" onchange="setDeviceLevel('${dev.id}', this.value)">
-          <span style="font-size:12px;width:32px">${dev.level}%</span>
+          <div class="dimmer-control-wrapper">
+            <input type="range" min="0" max="100" value="${dev.level}" class="custom-slider dimmer-slider" onchange="setDeviceLevel('${dev.id}', this.value)" onclick="event.stopPropagation()">
+            <span class="dimmer-val-badge ${dev.power ? 'on' : ''}">${dev.level}%</span>
+          </div>
         `;
       }
 
+      const isFanSpinning = dev.type === 'fan' && dev.power && dev.level > 0;
+
       devRowsHTML += `
-        <div class="device-row">
+        <div class="device-row ${dev.power ? 'is-on' : ''}">
           <div class="device-info">
-            <div class="device-icon ${dev.power ? 'on' : ''}">
+            <div class="device-icon ${dev.power ? 'on' : ''} ${isFanSpinning ? 'spinning' : ''}">
               <i class="ph-bold ${iconClass}"></i>
             </div>
-            <div>
-              <div style="font-weight:600">${dev.name}</div>
-              <div style="font-size:12px;color:var(--text-muted)">Subnet ${dev.subnet} &bull; Device ${dev.deviceId} &bull; Ch ${dev.channel} ${dev.type === 'fan' ? '&bull; ' + (dev.speedName || 'Off') : ''}</div>
+            <div class="device-text">
+              <div class="device-name">${dev.name}</div>
+              <div class="device-subtext">Subnet ${dev.subnet} &bull; Dev ${dev.deviceId} &bull; Ch ${dev.channel} ${dev.type === 'fan' ? '&bull; <span class="speed-tag">' + (dev.speedName || 'Off') + '</span>' : ''}</div>
             </div>
           </div>
           
-          <div style="display:flex;align-items:center;gap:12px">
+          <div class="device-actions">
             ${controlHTML}
-            <input type="checkbox" class="toggle-switch" ${dev.power ? 'checked' : ''} onchange="toggleDevicePower('${dev.id}', this.checked)">
-            <button class="btn-icon" onclick="deleteDevice('${dev.id}')" title="Delete Switch" style="width:28px;height:28px;font-size:14px;color:var(--accent-rose)"><i class="ph-bold ph-trash"></i></button>
+            <input type="checkbox" class="toggle-switch" ${dev.power ? 'checked' : ''} onchange="toggleDevicePower('${dev.id}', this.checked)" onclick="event.stopPropagation()">
+            <button class="btn-icon delete-btn" onclick="deleteDevice('${dev.id}'); event.stopPropagation();" title="Delete Switch"><i class="ph-bold ph-trash"></i></button>
           </div>
         </div>
       `;
     });
 
-    roomCard.innerHTML = `
-      <h3><i class="ph-bold ph-house-line"></i> ${roomName}</h3>
-      <div style="margin-top:16px">${devRowsHTML}</div>
+    groupCard.innerHTML = `
+      <div class="group-card-header" onclick="toggleGroupExpand('${roomName.replace(/'/g, "\\'")}')">
+        <div class="group-title-area">
+          <div class="group-icon">
+            <i class="ph-bold ${getRoomIcon(roomName)}"></i>
+          </div>
+          <div class="group-info">
+            <div class="group-name">${roomName}</div>
+            <div class="group-meta">
+              <span class="status-pill ${hasActive ? 'completed' : ''}">${statusText}</span>
+              <span>&bull; ${roomDevs.length} ${roomDevs.length === 1 ? 'device' : 'devices'}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="group-header-controls">
+          <div style="display:flex;align-items:center;gap:8px" onclick="event.stopPropagation()">
+            <span style="font-size:12px;color:var(--text-muted);font-weight:500">Group</span>
+            <input type="checkbox" class="toggle-switch" ${isMasterOn ? 'checked' : ''} onchange="toggleGroupPower('${roomName.replace(/'/g, "\\'")}', this.checked)">
+          </div>
+          <div class="expand-chevron">
+            <i class="ph-bold ph-caret-down"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="group-summary-bar">
+        ${fanCount > 0 ? `<span class="summary-badge ${roomDevs.some(d => d.type === 'fan' && d.power) ? 'active' : ''}"><i class="ph-bold ph-fan"></i> ${fanCount} Fans</span>` : ''}
+        ${dimmerCount > 0 ? `<span class="summary-badge ${roomDevs.some(d => d.type === 'dimmer' && d.power) ? 'active' : ''}"><i class="ph-bold ph-sliders"></i> ${dimmerCount} Dimmers</span>` : ''}
+        ${relayCount > 0 ? `<span class="summary-badge ${roomDevs.some(d => (d.type === 'relay' || d.type === 'rgb') && d.power) ? 'active' : ''}"><i class="ph-bold ph-lightning"></i> ${relayCount} Relays</span>` : ''}
+      </div>
+
+      <div class="group-card-body">
+        <div style="display:flex;flex-direction:column;gap:10px">${devRowsHTML}</div>
+      </div>
     `;
-    container.appendChild(roomCard);
+
+    container.appendChild(groupCard);
   });
+}
+
+function getRoomIcon(roomName) {
+  const name = roomName.toLowerCase();
+  if (name.includes('kitchen')) return 'ph-cooking-pot';
+  if (name.includes('bedroom')) return 'ph-bed';
+  if (name.includes('living')) return 'ph-armchair';
+  if (name.includes('balcony') || name.includes('outdoor')) return 'ph-tree';
+  if (name.includes('bath')) return 'ph-drop';
+  if (name.includes('dining')) return 'ph-fork-knife';
+  return 'ph-house';
+}
+
+function toggleGroupExpand(roomName) {
+  expandedGroups[roomName] = !expandedGroups[roomName];
+  renderLighting();
+}
+
+function toggleAllGroups(expandState) {
+  const roomNames = [...new Set(state.devices.map(d => d.room))];
+  roomNames.forEach(r => {
+    expandedGroups[r] = expandState;
+  });
+  renderLighting();
+}
+
+function toggleGroupPower(roomName, power) {
+  const roomDevs = state.devices.filter(d => d.room === roomName);
+  roomDevs.forEach(dev => {
+    sendWS('CONTROL_DEVICE', { id: dev.id, updates: { power } });
+  });
+}
+
+function turnOffAllLighting() {
+  const activeCount = state.devices.filter(d => d.power).length;
+  if (activeCount === 0) return;
+
+  if (confirm(`Turn OFF all ${activeCount} active lights and fans across all rooms?`)) {
+    state.devices.forEach(dev => {
+      if (dev.power) {
+        sendWS('CONTROL_DEVICE', { id: dev.id, updates: { power: false } });
+      }
+    });
+  }
+}
+
+function setLightingFilter(filter) {
+  currentLightingFilter = filter;
+  document.querySelectorAll('.filter-chip').forEach(btn => btn.classList.remove('active'));
+  const activeBtn = document.getElementById(`filter-chip-${filter}`);
+  if (activeBtn) activeBtn.classList.add('active');
+  renderLighting();
 }
 
 function toggleDevicePower(id, checked) {
