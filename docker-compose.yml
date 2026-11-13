@@ -27,7 +27,8 @@ services:
     # On Windows: Docker Desktop uses ports: (port 1900 is handled by start-alexa-ssdp.bat to prevent Windows SSDPSRV conflicts)
     # On Linux / Raspberry Pi: network_mode: host can be used directly for native Layer 2 SSDP broadcast
     ports:
-      - "3000:3000"       # Web Dashboard & REST API
+      - "6080:3000"       # Web Dashboard & REST API
+      - "80:80"        # SmartBus G4 SSDP Port
       - "6000:6000/udp"   # SmartBus G4 UDP Port
     environment:
       - PORT=3000
