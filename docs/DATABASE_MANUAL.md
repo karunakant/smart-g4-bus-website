@@ -7,6 +7,11 @@ This guide explains how the SmartBus G4 SQLite database works, how to add rooms 
 
 ### Database Architecture & Data Pipeline
 
+![SmartBus G4 Database Architecture & Pipeline](images/database-architecture.svg)
+
+<details>
+<summary>📐 View Mermaid Diagram Source</summary>
+
 ```mermaid
 flowchart LR
     A["SMART-G4.sqlite3<br/>(Master Configuration DB)"] -->|convert_db.py| B["data/devices.json<br/>(Active Cache)"]
@@ -14,6 +19,8 @@ flowchart LR
     C -->|Priority Queue| D["Home Assistant (MQTT)<br/>Amazon Alexa (Hue API)<br/>Web Dashboard"]
     C -->|save_to_sqlite.py| E["data/smartbus_runtime.sqlite3<br/>(Runtime States & Logs)"]
 ```
+
+</details>
 
 The system uses two SQLite database files:
 1. **`db/SMART-G4.sqlite3`** *(Master Configuration)*: Defines the rooms, lights, relays, fans, dimmers, curtains, AC units, and their hardware addresses (Subnet, Device, Channel).

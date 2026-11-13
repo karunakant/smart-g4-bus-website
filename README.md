@@ -35,6 +35,11 @@ Comprehensive, step-by-step guides written specifically for layman users:
 
 ## 📐 Technical Architecture
 
+![SmartBus G4 & Z-Audio System Architecture](docs/images/system-architecture.svg)
+
+<details>
+<summary>ASCII Flow Diagram</summary>
+
 ```
                     ┌─────────────────────────────────────────┐      ┌─────────────────────────────┐
                     │      Amazon Echo / Alexa Device         │      │       Home Assistant        │
@@ -62,6 +67,8 @@ Comprehensive, step-by-step guides written specifically for layman users:
         │   (192.168.0.200)     │                 │ (Relays, Dimmers, AC) │
         └───────────────────────┘                 └───────────────────────┘
 ```
+
+</details>
 
 ---
 

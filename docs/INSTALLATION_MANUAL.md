@@ -7,6 +7,11 @@ This guide walks you step-by-step through installing, running, and maintaining t
 
 ### System Architecture Overview
 
+![SmartBus G4 & Z-Audio System Architecture](images/system-architecture.svg)
+
+<details>
+<summary>📐 View Mermaid Diagram Source</summary>
+
 ```mermaid
 flowchart TD
     subgraph LAN ["Local Home Network (Wi-Fi / Ethernet)"]
@@ -31,6 +36,8 @@ flowchart TD
     SSDP <-->|HTTP Proxy 3000| Node
     Phone <-->|HTTP / WS 3000| Node
 ```
+
+</details>
 
 ---
 

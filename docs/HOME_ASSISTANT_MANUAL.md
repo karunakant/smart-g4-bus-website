@@ -10,10 +10,15 @@ This manual explains how to connect your **SmartBus G4 Home Automation & Z-Audio
 
 ### System Architecture
 
+![SmartBus G4 & Home Assistant Architecture](images/home-assistant-architecture.svg)
+
+<details>
+<summary>📐 View Mermaid Diagram Source</summary>
+
 ```mermaid
 flowchart TD
     subgraph SmartBus_Hardware ["SmartBus G4 Wired Network"]
-        Relays["DIN-Rail Relays (Module 47, 5, 120...)"]
+        Relays["DIN-Rail Relays (Module 47, 5, 120)"]
         Dimmers["Phase Dimmers"]
         Fans["Fan Speed Regulators (Module 44)"]
         HVAC["Coolmaster / HVAC Gateways"]
@@ -21,7 +26,7 @@ flowchart TD
         ZAudio["Z-Audio RSIP Gateway"]
     end
 
-    GW["SmartBus IP Gateway<br/>(192.168.0.200:6000 UDP)"]
+    GW["SmartBus IP Gateway (192.168.0.200:6000 UDP)"]
     Relays <-->|S-Bus Data Cable| GW
     Dimmers <-->|S-Bus Data Cable| GW
     Fans <-->|S-Bus Data Cable| GW
@@ -30,24 +35,26 @@ flowchart TD
     ZAudio <-->|UDP 6000| GW
 
     subgraph Server_Host ["SmartBus Automation Host (Pi 4 or PC)"]
-        NodeEngine["SmartBus Engine (Node.js)<br/>• Priority Command Queue<br/>• Auto-Discovery Dispatcher<br/>• Real-time State Mirror"]
-        MosqBroker["Mosquitto MQTT Broker<br/>(Port 1883 / WebSockets 9001)"]
+        NodeEngine["SmartBus Engine (Node.js)<br/>- Priority Command Queue<br/>- Auto-Discovery Dispatcher<br/>- Real-time State Mirror"]
+        MosqBroker["Mosquitto MQTT Broker (Port 1883 / 9001)"]
     end
 
     GW <-->|UDP Binary Frames| NodeEngine
-    NodeEngine <-->|MQTT Topics (smartbus/#)| MosqBroker
-    NodeEngine -->|Auto-Discovery (homeassistant/#)| MosqBroker
+    NodeEngine <-->|"MQTT Topics: smartbus"| MosqBroker
+    NodeEngine -->|"Auto-Discovery: homeassistant"| MosqBroker
 
-    subgraph Home_Assistant ["Home Assistant (Any Device: Pi, VM, NUC, Cloud)"]
+    subgraph Home_Assistant ["Home Assistant (Any Device: Pi, VM, NUC)"]
         HAMQTT["MQTT Integration"]
-        HALovelace["Home Assistant UI (Lovelace)<br/>• Rooms & Suggested Areas<br/>• Mobile App (iOS / Android)<br/>• Unified Dashboards & Automations"]
-        ThirdParty["Third-Party Integrations<br/>(Wipro, Tuya, Zigbee, Philips Hue)"]
+        HALovelace["Home Assistant UI (Lovelace)<br/>- Rooms and Suggested Areas<br/>- Mobile App (iOS / Android)<br/>- Unified Dashboards and Automations"]
+        ThirdParty["Third-Party Integrations<br/>(Wipro, Tuya, Zigbee, Hue)"]
     end
 
-    MosqBroker <-->|MQTT 1883 TCP| HAMQTT
+    MosqBroker <-->|"MQTT 1883 TCP"| HAMQTT
     HAMQTT <--> HALovelace
     ThirdParty <--> HALovelace
 ```
+
+</details>
 
 ---
 
@@ -155,6 +162,11 @@ Each device is automatically linked to its room area (e.g. *Kitchen*, *Living Ro
 
 A major advantage of using Home Assistant is uniting wired **SmartBus G4** hardware with wireless **Wipro** or **Tuya** smart devices under one single roof.
 
+![Unified Home Assistant - Wired SmartBus & Wireless Wipro](images/home-assistant-wipro-unification.svg)
+
+<details>
+<summary>📐 View Mermaid Diagram Source</summary>
+
 ```mermaid
 flowchart LR
     subgraph HA ["Home Assistant (Unified Brain)"]
@@ -177,6 +189,8 @@ flowchart LR
     WiproLight <-->|Tuya / Smart Life| HA
     WiproFan <-->|Tuya / Smart Life| HA
 ```
+
+</details>
 
 ### How to Add Your Wipro Devices to Home Assistant:
 
