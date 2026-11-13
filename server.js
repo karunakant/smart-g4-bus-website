@@ -61,6 +61,7 @@ const simulator = new SmartBusSimulator({
 // 3. Initialize Alexa Smart Home Voice Bridge
 const alexaBridge = new AlexaBridge({
   port: PORT,
+  externalPort: process.env.EXTERNAL_PORT ? parseInt(process.env.EXTERNAL_PORT) : (process.env.ALEXA_PORT ? parseInt(process.env.ALEXA_PORT) : 80),
   enabled: true,
   deviceManager,
   zaudio
@@ -203,6 +204,11 @@ function sendSmartBusUDP(packetOptions) {
 
   return true;
 }
+
+// Connect Alexa Bridge with Priority Queue & UDP Dispatcher
+alexaBridge.setQueueService(mqttQueueService);
+alexaBridge.setSendSmartBusUDP(sendSmartBusUDP);
+alexaBridge.startPort80Listener(app);
 
 // -------------------------------------------------------------
 // WebSocket Realtime Connection Handling
@@ -380,52 +386,77 @@ app.get('/description.xml', (req, res) => {
   res.send(alexaBridge.getDescriptionXML(req.hostname || alexaBridge.getLocalIP()));
 });
 
-app.post('/api', (req, res) => {
-  res.json([{ success: { username: '1028d6642673e4e5263164ece22821e' } }]);
+// Bridge Pairing & Authorization Endpoint (Amazon Echo handshake)
+app.post(['/api', '/api/'], (req, res) => {
+  res.json([{ success: { username: alexaBridge.defaultUsername } }]);
 });
 
+// Hue Bridge Config Endpoints
+app.get(['/api/config', '/api/:username/config'], (req, res) => {
+  res.json(alexaBridge.getConfig());
+});
+
+// Hue Full State / Discovery Endpoint
 app.get('/api/:username', (req, res) => {
-  const username = req.params.username;
-  if (username === 'alexa' || username.length > 5) {
-    return res.json({
-      lights: alexaBridge.getAlexaDevices(),
-      groups: {},
-      schedules: {},
-      scenes: {},
-      rules: {},
-      sensors: {},
-      config: {
-        name: 'Philips hue',
-        mac: '00:17:88:09:d7:4d',
-        dhcp: true,
-        ipaddress: alexaBridge.getLocalIP(),
-        netmask: '255.255.255.0',
-        gateway: '192.168.0.1',
-        bridgeid: '001788FFFE09D74D',
-        modelid: 'BSB002',
-        swversion: '1935144020'
-      }
-    });
-  }
-  res.status(404).json({ error: 'Device not found' });
+  res.json(alexaBridge.getFullState(req.params.username));
 });
 
+// Lights Listing Endpoints
 app.get(['/api/alexa/lights', '/api/:username/lights'], (req, res) => {
   res.json(alexaBridge.getAlexaDevices());
 });
 
+// Single Light Info
 app.get(['/api/alexa/lights/:id', '/api/:username/lights/:id'], (req, res) => {
-  const devices = alexaBridge.getAlexaDevices();
-  const dev = devices[req.params.id];
+  const dev = alexaBridge.getAlexaDevice(req.params.id);
   if (dev) return res.json(dev);
-  res.status(404).json({ error: 'Device not found' });
+  res.status(404).json({ error: { type: 3, address: `/lights/${req.params.id}`, description: 'Device not found' } });
 });
 
+// Light State Control Endpoint
 app.put(['/api/alexa/lights/:id/state', '/api/:username/lights/:id/state'], async (req, res) => {
   const result = await alexaBridge.handleAlexaStateUpdate(req.params.id, req.body);
   broadcast({ type: 'SNAPSHOT_UPDATED', snapshot: deviceManager.getSnapshot() });
   broadcast({ type: 'ZAUDIO_UPDATED', zaudio: zaudio.getAllStates() });
   res.json(result);
+});
+
+// Search for new lights (Echo discovery trigger)
+app.post(['/api/alexa/lights', '/api/:username/lights'], (req, res) => {
+  res.json([{ success: { '/lights': 'Searching for new devices' } }]);
+});
+
+app.get(['/api/alexa/lights/new', '/api/:username/lights/new'], (req, res) => {
+  res.json({ lastscan: 'none' });
+});
+
+// Empty collections expected by Hue / Echo clients
+app.get(['/api/alexa/groups', '/api/:username/groups'], (req, res) => res.json({}));
+app.get(['/api/alexa/scenes', '/api/:username/scenes'], (req, res) => res.json({}));
+app.get(['/api/alexa/schedules', '/api/:username/schedules'], (req, res) => res.json({}));
+app.get(['/api/alexa/sensors', '/api/:username/sensors'], (req, res) => res.json({}));
+app.get(['/api/alexa/rules', '/api/:username/rules'], (req, res) => res.json({}));
+
+// Alexa UI Bridge Status API
+app.get('/api/alexa/status', (req, res) => {
+  const devices = alexaBridge.getAlexaDevices();
+  res.json({
+    enabled: alexaBridge.enabled,
+    bridgeId: alexaBridge.bridgeId,
+    macAddress: alexaBridge.macAddress,
+    hostIp: alexaBridge.getLocalIP(),
+    advertisedPort: alexaBridge.externalPort || PORT,
+    primaryPort: PORT,
+    ssdpMulticast: '239.255.255.250:1900',
+    deviceCount: Object.keys(devices).length,
+    devices: Object.keys(devices).map(id => ({
+      numericId: id,
+      name: devices[id].name,
+      type: devices[id].type,
+      on: devices[id].state.on,
+      bri: devices[id].state.bri
+    }))
+  });
 });
 
 // -------------------------------------------------------------
@@ -439,8 +470,12 @@ app.get('/api/status', (req, res) => {
     zaudioRsipHost: true,
     serverTime: new Date().toISOString(),
     alexaBridge: {
-      enabled: true,
-      discoveredDevicesCount: Object.keys(alexaBridge.getAlexaDevices()).length
+      enabled: alexaBridge.enabled,
+      hostIp: alexaBridge.getLocalIP(),
+      port: alexaBridge.externalPort || PORT,
+      primaryPort: PORT,
+      discoveredDevicesCount: Object.keys(alexaBridge.getAlexaDevices()).length,
+      bridgeId: alexaBridge.bridgeId
     },
     zaudio: {
       ip: zaudio.ip,
@@ -565,6 +600,11 @@ app.post('/api/queue/pause', (req, res) => {
 app.post('/api/queue/resume', (req, res) => {
   mqttQueueService.setPaused(false);
   res.json({ success: true, paused: false });
+});
+
+app.post('/api/ha/discovery', (req, res) => {
+  mqttQueueService.publishHomeAssistantDiscovery();
+  res.json({ success: true, message: 'Home Assistant MQTT Auto-Discovery published successfully.' });
 });
 
 // Start HTTP Server

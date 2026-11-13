@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileMenu()"></div>
   <div class="app-container">
     
     <!-- Sidebar Navigation -->
@@ -104,9 +105,14 @@
       
       <!-- Topbar Header -->
       <header class="topbar">
-        <div class="header-title">
-          <h2 id="page-title">Home Dashboard</h2>
-          <p id="page-subtitle">Real-time control for SmartBus G4, Z-Audio & Alexa equipment</p>
+        <div style="display:flex;align-items:center">
+          <button class="mobile-nav-toggle" id="mobile-nav-toggle" onclick="toggleMobileMenu()" title="Toggle Navigation Menu">
+            <i class="ph-bold ph-list"></i>
+          </button>
+          <div class="header-title">
+            <h2 id="page-title">Home Dashboard</h2>
+            <p id="page-subtitle">Real-time control for SmartBus G4, Z-Audio & Alexa equipment</p>
+          </div>
         </div>
 
         <div class="quick-scenes">
@@ -133,22 +139,22 @@
             <div class="stat-card">
               <div class="stat-icon yellow"><i class="ph-bold ph-lightbulb"></i></div>
               <div class="stat-info">
-                <span class="stat-value" id="stat-active-lights">6 / 9</span>
+                <span class="stat-value" id="stat-active-lights">0 / 0</span>
                 <span class="stat-label">Active Lights & Fans</span>
               </div>
             </div>
             <div class="stat-card">
               <div class="stat-icon purple"><i class="ph-bold ph-speaker-high"></i></div>
               <div class="stat-info">
-                <span class="stat-value" id="stat-active-zones">2 Active</span>
+                <span class="stat-value" id="stat-active-zones">0 Active</span>
                 <span class="stat-label">Z-Audio Zones</span>
               </div>
             </div>
             <div class="stat-card">
               <div class="stat-icon blue"><i class="ph-bold ph-thermometer-cold"></i></div>
               <div class="stat-info">
-                <span class="stat-value" id="stat-current-temp">24.5 °C</span>
-                <span class="stat-label">Living Room Climate</span>
+                <span class="stat-value" id="stat-current-temp">-- °C</span>
+                <span class="stat-label">Hall Climate (DB)</span>
               </div>
             </div>
             <div class="stat-card">
@@ -164,7 +170,7 @@
             <!-- Z-Audio Quick Player Widget -->
             <div class="glass-card widget-zaudio-overview">
               <div class="card-header">
-                <h3><i class="ph-bold ph-music-notes"></i> Z-Audio Main Controller</h3>
+                <h3><i class="ph-bold ph-music-notes"></i> Z-Audio Main Controller (DB)</h3>
                 <span class="ip-tag">192.168.0.200</span>
               </div>
               <div class="overview-player">
@@ -183,13 +189,27 @@
               </div>
             </div>
 
-            <!-- Favorite Lighting Quick Switches -->
+            <!-- Quick HVAC Climate Control Widget (DB Driven) -->
             <div class="glass-card">
               <div class="card-header">
-                <h3><i class="ph-bold ph-toggle-left"></i> Quick Lighting & Fan Switches</h3>
+                <h3><i class="ph-bold ph-thermometer-cold"></i> Quick Climate Controls (DB)</h3>
+                <span class="status-pill completed" id="overview-hvac-badge">Active</span>
               </div>
-              <div class="quick-switches-list" id="quick-lighting-container">
-                <!-- Dynamically populated -->
+              <div id="overview-hvac-container" class="quick-switches-list">
+                <!-- Dynamically populated from state.hvac -->
+              </div>
+            </div>
+
+            <!-- Lighting & Fan Equipment Controls (DB Driven) -->
+            <div class="glass-card" style="grid-column: 1 / -1;">
+              <div class="card-header" style="flex-wrap:wrap;gap:12px">
+                <h3><i class="ph-bold ph-toggle-left"></i> Equipment Controls (SMART-G4 Database)</h3>
+                <div class="filter-chips" id="overview-room-chips">
+                  <!-- Dynamically populated room filter chips -->
+                </div>
+              </div>
+              <div class="quick-switches-list" id="quick-lighting-container" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:12px">
+                <!-- Dynamically populated equipment rows from DB -->
               </div>
             </div>
           </div>
@@ -299,8 +319,36 @@
 
         <!-- TAB 3: LIGHTING & FANS -->
         <section class="tab-page" id="tab-lighting">
-          <div class="lighting-room-grid" id="lighting-container">
-            <!-- Dynamically populated room cards -->
+          <div class="group-filter-bar glass-card">
+            <div class="filter-chips">
+              <button class="filter-chip active" id="filter-chip-all" onclick="setLightingFilter('all')">
+                <i class="ph-bold ph-squares-four"></i> All Rooms
+              </button>
+              <button class="filter-chip" id="filter-chip-fan" onclick="setLightingFilter('fan')">
+                <i class="ph-bold ph-fan"></i> Fans Only
+              </button>
+              <button class="filter-chip" id="filter-chip-dimmer" onclick="setLightingFilter('dimmer')">
+                <i class="ph-bold ph-sliders"></i> Dimmers
+              </button>
+              <button class="filter-chip" id="filter-chip-relay" onclick="setLightingFilter('relay')">
+                <i class="ph-bold ph-lightning"></i> Relays & Switches
+              </button>
+            </div>
+            <div class="group-actions">
+              <button class="btn-action" onclick="toggleAllGroups(true)">
+                <i class="ph-bold ph-caret-double-down"></i> Expand All
+              </button>
+              <button class="btn-action" onclick="toggleAllGroups(false)">
+                <i class="ph-bold ph-caret-double-up"></i> Collapse All
+              </button>
+              <button class="btn-action danger" onclick="turnOffAllLighting()">
+                <i class="ph-bold ph-power"></i> Turn All Off
+              </button>
+            </div>
+          </div>
+
+          <div class="lighting-group-grid" id="lighting-container">
+            <!-- Dynamically populated group cards -->
           </div>
         </section>
 
@@ -414,15 +462,46 @@
 
         <!-- TAB 7: ALEXA VOICE CONTROL -->
         <section class="tab-page" id="tab-alexa">
-          <div class="glass-card">
+          <div class="glass-card" style="margin-bottom:24px">
             <div class="card-header">
-              <h3><i class="ph-bold ph-microphone-stage"></i> Amazon Alexa Smart Home Setup</h3>
-              <span class="zaudio-banner-badge"><i class="ph-bold ph-broadcast"></i> Local UPnP Bridge Active</span>
+              <h3><i class="ph-bold ph-microphone-stage"></i> Amazon Alexa Smart Home Setup & Diagnostics</h3>
+              <span class="zaudio-banner-badge" id="alexa-bridge-badge"><i class="ph-bold ph-broadcast"></i> Local UPnP Bridge Active</span>
             </div>
 
             <div style="line-height:1.6;color:var(--text-muted);margin-bottom:24px">
-              Your SmartBus G4 Home Automation server includes a built-in <strong>Alexa Local Discovery Bridge</strong>.
-              All your SmartBus lights, fan switches, dimmers, scenes, and Z-Audio zones automatically emulate Philips Hue smart home devices on your local network.
+              Your SmartBus G4 Home Automation server includes a built-in <strong>Alexa Local Discovery Bridge</strong> emulating a Philips Hue bridge.
+              All your SmartBus lights, fan switches, dimmers, scenes, and Z-Audio zones automatically emulate smart home devices discoverable by any Amazon Echo device on your Wi-Fi network.
+            </div>
+
+            <div class="stats-grid" style="margin-bottom:24px">
+              <div class="stat-card">
+                <div class="stat-icon emerald"><i class="ph-bold ph-network"></i></div>
+                <div class="stat-info">
+                  <span class="stat-value" id="alexa-bridge-ip">Detecting...</span>
+                  <span class="stat-label">Bridge Host IP</span>
+                </div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon cyan"><i class="ph-bold ph-plugs-connected"></i></div>
+                <div class="stat-info">
+                  <span class="stat-value" id="alexa-bridge-port">Port 80</span>
+                  <span class="stat-label">Echo HTTP Discovery Port</span>
+                </div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon yellow"><i class="ph-bold ph-radio"></i></div>
+                <div class="stat-info">
+                  <span class="stat-value">239.255.255.250:1900</span>
+                  <span class="stat-label">SSDP UPnP Multicast</span>
+                </div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon purple"><i class="ph-bold ph-lightbulb"></i></div>
+                <div class="stat-info">
+                  <span class="stat-value" id="alexa-bridge-device-count">0</span>
+                  <span class="stat-label">Devices Exposed to Alexa</span>
+                </div>
+              </div>
             </div>
 
             <div class="stats-grid" style="margin-bottom:24px">
@@ -443,32 +522,84 @@
             </div>
 
             <h4 style="font-family:var(--font-heading);font-size:18px;margin-bottom:12px">Supported Alexa Voice Commands</h4>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:24px">
               <div style="background:rgba(0,0,0,0.3);padding:16px;border-radius:12px;border:1px solid var(--border-color)">
                 <strong style="color:#fff"><i class="ph-bold ph-lightbulb"></i> Lighting & Fan Commands</strong>
                 <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-muted)">
-                  <li>"Alexa, turn on Living Room Chandelier"</li>
-                  <li>"Alexa, turn on Living Room Ceiling Fan"</li>
-                  <li>"Alexa, set Bedroom Main Light to 40%"</li>
+                  <li>"Alexa, turn on Kitchen Spot 1"</li>
+                  <li>"Alexa, turn off Kitchen Spot 1"</li>
+                  <li>"Alexa, set Kitchen Spot 1 to 50%"</li>
+                  <li>"Alexa, turn on Master Bedroom Fan"</li>
                 </ul>
               </div>
 
               <div style="background:rgba(0,0,0,0.3);padding:16px;border-radius:12px;border:1px solid var(--border-color)">
                 <strong style="color:#fff"><i class="ph-bold ph-speaker-high"></i> Z-Audio Commands</strong>
                 <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-muted)">
-                  <li>"Alexa, turn on Z-Audio Living Room"</li>
-                  <li>"Alexa, set Z-Audio Living Room to 50%"</li>
+                  <li>"Alexa, turn on Z-Audio Main Living Room"</li>
+                  <li>"Alexa, set Z-Audio Main Living Room to 50%"</li>
                   <li>"Alexa, turn off Z-Audio Master Bedroom"</li>
                 </ul>
               </div>
 
               <div style="background:rgba(0,0,0,0.3);padding:16px;border-radius:12px;border:1px solid var(--border-color)">
-                <strong style="color:#fff"><i class="ph-bold ph-sparkles"></i> Automation Scenes</strong>
+                <strong style="color:#fff"><i class="ph-bold ph-sparkles"></i> Troubleshooting Tips</strong>
                 <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-muted)">
-                  <li>"Alexa, turn on Good Morning"</li>
-                  <li>"Alexa, turn on Cinema Mode"</li>
-                  <li>"Alexa, turn on Party Lounge"</li>
+                  <li>Ensure your Echo device and server are on the same Wi-Fi subnet.</li>
+                  <li>Amazon Echo requires port 80 for Philips Hue bridge discovery.</li>
+                  <li>Test any device below with the Voice Command Simulator.</li>
                 </ul>
+              </div>
+            </div>
+
+            <!-- Voice Simulator Card -->
+            <div style="background:rgba(0,0,0,0.35);padding:20px;border-radius:14px;border:1px solid var(--border-highlight);margin-bottom:24px">
+              <h4 style="font-family:var(--font-heading);font-size:16px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+                <i class="ph-bold ph-play-circle" style="color:var(--accent-cyan)"></i>
+                Voice Command Simulator (Test Bridge API)
+              </h4>
+              <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+                <select id="alexa-sim-device" style="padding:10px 14px;border-radius:8px;background:rgba(18,24,38,0.9);color:#fff;border:1px solid var(--border-color);min-width:240px">
+                  <option value="">Loading devices...</option>
+                </select>
+                <button class="btn-primary" onclick="simulateAlexaCommand(true)" style="padding:10px 18px">
+                  <i class="ph-bold ph-power"></i> Turn ON
+                </button>
+                <button class="btn-secondary" onclick="simulateAlexaCommand(false)" style="padding:10px 18px">
+                  <i class="ph-bold ph-power"></i> Turn OFF
+                </button>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:13px;color:var(--text-muted)">Dim:</span>
+                  <input type="range" id="alexa-sim-bri" min="1" max="254" value="128" style="width:100px" oninput="document.getElementById('alexa-sim-bri-val').textContent = Math.round((this.value/254)*100)+'%'">
+                  <span id="alexa-sim-bri-val" style="font-size:13px;color:var(--accent-cyan);min-width:35px">50%</span>
+                  <button class="btn-secondary" onclick="simulateAlexaDim()" style="padding:10px 14px">Set Level</button>
+                </div>
+              </div>
+              <div id="alexa-sim-result" style="margin-top:12px;font-family:monospace;font-size:12px;color:var(--accent-emerald);display:none;background:rgba(0,0,0,0.5);padding:8px 12px;border-radius:6px"></div>
+            </div>
+
+            <!-- Exposed Alexa Devices List -->
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <h4 style="font-family:var(--font-heading);font-size:16px">Exposed Devices Registry (Alexa Hue API)</h4>
+                <input type="text" id="alexa-filter" placeholder="Filter devices..." oninput="filterAlexaDevices(this.value)" style="padding:6px 12px;border-radius:6px;background:rgba(0,0,0,0.3);border:1px solid var(--border-color);color:#fff;font-size:13px;width:200px">
+              </div>
+              <div style="max-height:350px;overflow-y:auto;border:1px solid var(--border-color);border-radius:10px">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left">
+                  <thead style="background:rgba(255,255,255,0.05);position:sticky;top:0;backdrop-filter:blur(10px)">
+                    <tr>
+                      <th style="padding:10px 14px">Hue ID</th>
+                      <th style="padding:10px 14px">Alexa Spoken Name</th>
+                      <th style="padding:10px 14px">Type</th>
+                      <th style="padding:10px 14px">Power</th>
+                      <th style="padding:10px 14px">Brightness</th>
+                      <th style="padding:10px 14px;text-align:right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="alexa-devices-tbody">
+                    <tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text-muted)">Loading Alexa device list...</td></tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -617,9 +748,14 @@
                   </label>
                 </div>
 
-                <button type="submit" class="btn-primary" style="width:100%;justify-content:center;margin-top:8px">
-                  <i class="ph-bold ph-floppy-disk"></i> Connect & Save MQTT Settings
-                </button>
+                <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px">
+                  <button type="submit" class="btn-primary" style="flex:1;justify-content:center">
+                    <i class="ph-bold ph-floppy-disk"></i> Connect & Save Settings
+                  </button>
+                  <button type="button" class="btn-secondary" onclick="publishHADiscoveryNow()" style="flex:1;justify-content:center">
+                    <i class="ph-bold ph-broadcast"></i> Sync with Home Assistant Now
+                  </button>
+                </div>
               </form>
             </div>
           </div>

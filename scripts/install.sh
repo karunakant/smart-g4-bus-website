@@ -47,6 +47,9 @@ fi
 echo "[+] Installing NPM packages..."
 npm install --production
 
+echo "[+] Granting port 80 binding capability for Amazon Echo discovery..."
+sudo setcap 'cap_net_bind_service=+ep' $(which node) || true
+
 echo "[+] Setting up systemd background service..."
 sudo cp systemd/smartbusg4.service /etc/systemd/system/smartbusg4.service
 sudo systemctl daemon-reload

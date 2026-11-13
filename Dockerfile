@@ -24,8 +24,9 @@ ENV UDP_PORT=6000
 ENV GATEWAY_IP=192.168.0.200
 ENV ZAUDIO_IP=192.168.0.200
 
-# Expose HTTP/WebSocket port (3000), SmartBus UDP port (6000), and Alexa SSDP port (1900)
+# Expose HTTP/WebSocket port (3000), Alexa Port (80), SmartBus UDP port (6000), and Alexa SSDP port (1900)
 EXPOSE 3000
+EXPOSE 80
 EXPOSE 6000/udp
 EXPOSE 1900/udp
 

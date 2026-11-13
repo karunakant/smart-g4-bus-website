@@ -153,3 +153,88 @@
 1789754122: mosquitto version 2.0.22 running
 1789754123: New connection from 172.18.0.1:48590 on port 1883.
 1789754123: New client connected from 172.18.0.1:48590 as smartbus-pi-1245 (p2, c1, k60).
+1789755922: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1791316940: mosquitto version 2.0.22 starting
+1791316940: Config loaded from /mosquitto/config/mosquitto.conf.
+1791316940: Opening ipv4 listen socket on port 1883.
+1791316940: Opening ipv6 listen socket on port 1883.
+1791316940: Opening websockets listen socket on port 9001.
+1791316940: mosquitto version 2.0.22 running
+1791316941: New connection from 172.18.0.1:46266 on port 1883.
+1791316941: New client connected from 172.18.0.1:46266 as smartbus-pi-6000 (p2, c1, k60).
+1791316968: Client smartbus-pi-6000 closed its connection.
+1791316968: mosquitto version 2.0.22 terminating
+1791316968: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1794303863: mosquitto version 2.0.22 starting
+1794303863: Config loaded from /mosquitto/config/mosquitto.conf.
+1794303863: Opening ipv4 listen socket on port 1883.
+1794303863: Opening ipv6 listen socket on port 1883.
+1794303863: Opening websockets listen socket on port 9001.
+1794303863: mosquitto version 2.0.22 running
+1794303864: New connection from 172.18.0.1:42256 on port 1883.
+1794303864: New client connected from 172.18.0.1:42256 as smartbus-pi-7884 (p2, c1, k60).
+1794304078: Client smartbus-pi-7884 closed its connection.
+1794304078: mosquitto version 2.0.22 terminating
+1794304078: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1794304118: mosquitto version 2.0.22 starting
+1794304118: Config loaded from /mosquitto/config/mosquitto.conf.
+1794304118: Opening ipv4 listen socket on port 1883.
+1794304118: Opening ipv6 listen socket on port 1883.
+1794304118: Opening websockets listen socket on port 9001.
+1794304118: mosquitto version 2.0.22 running
+1794304119: New connection from 172.18.0.3:52268 on port 1883.
+1794304119: New client connected from 172.18.0.3:52268 as smartbus-pi-3859 (p2, c1, k60).
+1794304462: Client smartbus-pi-3859 closed its connection.
+1794304463: New connection from 172.18.0.3:42672 on port 1883.
+1794304463: New client connected from 172.18.0.3:42672 as smartbus-pi-6173 (p2, c1, k60).
+1794304869: Client smartbus-pi-6173 closed its connection.
+1794304870: mosquitto version 2.0.22 terminating
+1794304870: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1794304897: mosquitto version 2.0.22 starting
+1794304897: Config loaded from /mosquitto/config/mosquitto.conf.
+1794304897: Opening ipv4 listen socket on port 1883.
+1794304897: Opening ipv6 listen socket on port 1883.
+1794304897: Opening websockets listen socket on port 9001.
+1794304897: mosquitto version 2.0.22 running
+1794304897: New connection from 172.18.0.1:48940 on port 1883.
+1794304897: New client connected from 172.18.0.1:48940 as smartbus-pi-3017 (p2, c1, k60).
+1794305118: Client smartbus-pi-3017 closed its connection.
+1794305118: New connection from 172.18.0.3:48060 on port 1883.
+1794305118: New client connected from 172.18.0.3:48060 as smartbus-pi-6043 (p2, c1, k60).
+1794305898: New connection from 172.18.0.3:37184 on port 1883.
+1794305898: New client connected from 172.18.0.3:37184 as mqttjs_c370b98c (p2, c1, k60).
+1794305898: Client mqttjs_c370b98c closed its connection.
+1794306072: Client smartbus-pi-6043 closed its connection.
+1794306072: mosquitto version 2.0.22 terminating
+1794306072: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1794306098: mosquitto version 2.0.22 starting
+1794306098: Config loaded from /mosquitto/config/mosquitto.conf.
+1794306098: Opening ipv4 listen socket on port 1883.
+1794306098: Opening ipv6 listen socket on port 1883.
+1794306098: Opening websockets listen socket on port 9001.
+1794306098: mosquitto version 2.0.22 running
+1794306099: New connection from 172.18.0.3:58914 on port 1883.
+1794306099: New client connected from 172.18.0.3:58914 as smartbus-pi-2243 (p2, c1, k60).
+1794306111: New connection from 172.18.0.3:46264 on port 1883.
+1794306111: New client connected from 172.18.0.3:46264 as mqttjs_69c33318 (p2, c1, k60).
+1794306111: Client mqttjs_69c33318 closed its connection.
+1794306130: New connection from 172.18.0.3:60866 on port 1883.
+1794306130: New client connected from 172.18.0.3:60866 as mqttjs_791928b2 (p2, c1, k60).
+1794306130: Client mqttjs_791928b2 closed its connection.
+1794307899: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1794309700: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1794311501: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1794596499: mosquitto version 2.0.22 starting
+1794596499: Config loaded from /mosquitto/config/mosquitto.conf.
+1794596499: Opening ipv4 listen socket on port 1883.
+1794596499: Opening ipv6 listen socket on port 1883.
+1794596499: Opening websockets listen socket on port 9001.
+1794596499: mosquitto version 2.0.22 running
+1794596500: New connection from 172.18.0.3:59854 on port 1883.
+1794596500: New client connected from 172.18.0.3:59854 as smartbus-pi-5108 (p2, c1, k60).
+1794596541: Client smartbus-pi-5108 closed its connection.
+1794596542: New connection from 172.18.0.3:33088 on port 1883.
+1794596542: New client connected from 172.18.0.3:33088 as smartbus-pi-936 (p2, c1, k60).
+1794596595: Client smartbus-pi-936 closed its connection.
+1794596596: New connection from 172.18.0.3:47222 on port 1883.
+1794596596: New client connected from 172.18.0.3:47222 as smartbus-pi-5621 (p2, c1, k60).

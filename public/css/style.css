@@ -1388,7 +1388,170 @@ body {
   background: rgba(239, 68, 68, 0.2) !important;
 }
 
-/* Responsive adjustment for compact screens */
+/* -------------------------------------------------------------
+   Multi-Device & Multi-Screen Responsive System
+   (Android, iPhone, iPad, 1080p Desktop, 4K Displays & Smart TVs)
+   ------------------------------------------------------------- */
+
+/* Mobile Hamburger Toggle & Overlay */
+.mobile-nav-toggle {
+  display: none;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 22px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.mobile-nav-toggle:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-highlight);
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  z-index: 99;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.sidebar-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* 1. Mobile Smartphones (Android, iPhone: <= 768px) */
+@media (max-width: 768px) {
+  .mobile-nav-toggle {
+    display: flex;
+  }
+
+  .sidebar-overlay {
+    display: block;
+  }
+
+  .sidebar {
+    width: 290px;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: -300px;
+    z-index: 1000;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(300px);
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding: 16px;
+    gap: 20px;
+  }
+
+  .topbar {
+    align-items: flex-start;
+  }
+
+  .header-title h2 {
+    font-size: 20px;
+  }
+
+  .header-title p {
+    font-size: 12px;
+  }
+
+  .quick-scenes {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scrollbar-width: none;
+  }
+
+  .quick-scenes::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scene-chip {
+    padding: 8px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 14px;
+    gap: 14px;
+  }
+
+  .stat-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+  }
+
+  .stat-value {
+    font-size: 18px;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .lighting-group-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .group-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-chips, .group-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .filter-chip, .btn-action {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .overview-player {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .player-controls {
+    justify-content: center;
+  }
+}
+
+/* 2. Compact Devices Layout (<= 520px) */
 @media (max-width: 520px) {
   .device-row {
     flex-direction: column;
@@ -1401,6 +1564,158 @@ body {
     margin-left: 0;
   }
 }
+
+/* 3. Tablets & Small Laptops (769px - 1199px) */
+@media (min-width: 769px) and (max-width: 1199px) {
+  .sidebar {
+    width: 240px;
+    padding: 18px;
+  }
+
+  .brand-text h1 {
+    font-size: 16px;
+  }
+
+  .nav-item {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .main-content {
+    margin-left: 240px;
+    padding: 24px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lighting-group-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+}
+
+/* 4. Full HD Monitors & Laptops (1080p: 1200px - 1919px) */
+@media (min-width: 1200px) and (max-width: 1919px) {
+  .lighting-group-grid {
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  }
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* 5. 4K & Ultra-Wide TV Displays (>= 1920px / 2560px / 4K 3840px) */
+@media (min-width: 1920px) {
+  body {
+    font-size: 17px;
+  }
+
+  .app-container {
+    max-width: 2560px;
+    margin: 0 auto;
+  }
+
+  .sidebar {
+    width: 320px;
+    padding: 32px;
+  }
+
+  .brand-icon {
+    width: 52px;
+    height: 52px;
+    font-size: 28px;
+  }
+
+  .brand-text h1 {
+    font-size: 22px;
+  }
+
+  .nav-item {
+    padding: 14px 18px;
+    font-size: 15px;
+  }
+
+  .main-content {
+    margin-left: 320px;
+    padding: 40px;
+    gap: 36px;
+  }
+
+  .header-title h2 {
+    font-size: 32px;
+  }
+
+  .header-title p {
+    font-size: 16px;
+  }
+
+  .scene-chip {
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+  }
+
+  .stat-card {
+    padding: 26px;
+  }
+
+  .stat-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 28px;
+  }
+
+  .stat-value {
+    font-size: 26px;
+  }
+
+  .stat-label {
+    font-size: 14px;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1.4fr 1fr;
+    gap: 32px;
+  }
+
+  .lighting-group-grid {
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 28px;
+  }
+
+  .group-name {
+    font-size: 18px;
+  }
+
+  .device-name {
+    font-size: 15px;
+  }
+
+  .device-subtext {
+    font-size: 12px;
+  }
+
+  .speed-chip {
+    padding: 5px 12px;
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 2560px) {
+  .lighting-group-grid {
+    grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+  }
+}
+
 
 
 

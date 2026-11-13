@@ -37,6 +37,20 @@ document.addEventListener('DOMContentLoaded', () => {
 // -------------------------------------------------------------
 // Navigation Tabs
 // -------------------------------------------------------------
+function toggleMobileMenu() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (sidebar) sidebar.classList.toggle('mobile-open');
+  if (overlay) overlay.classList.toggle('active');
+}
+
+function closeMobileMenu() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (sidebar) sidebar.classList.remove('mobile-open');
+  if (overlay) overlay.classList.remove('active');
+}
+
 function initNavigation() {
   const navItems = document.querySelectorAll('.nav-item');
   navItems.forEach(item => {
@@ -48,6 +62,8 @@ function initNavigation() {
       const targetTab = item.getAttribute('data-tab');
       const targetPage = document.getElementById(targetTab);
       if (targetPage) targetPage.classList.add('active');
+
+      closeMobileMenu();
 
       // Update Page Titles
       const titleEl = document.getElementById('page-title');
@@ -73,6 +89,7 @@ function initNavigation() {
       } else if (targetTab === 'tab-alexa') {
         titleEl.textContent = 'Amazon Alexa Voice Control';
         subtitleEl.textContent = 'Local UPnP discovery & Hue smart home bridge';
+        loadAlexaStatus();
       } else if (targetTab === 'tab-bus') {
         titleEl.textContent = 'UDP Bus Diagnostics';
         subtitleEl.textContent = 'Real-time S-Bus packet inspector (Port 6000)';
@@ -187,19 +204,34 @@ function renderAllComponents() {
   renderSettings();
 }
 
+let overviewRoomFilter = 'all';
+
 function renderOverviewStats() {
+  if (!state.devices) return;
+
+  // 1. Metric: Active Lights & Fans from DB
   const total = state.devices.length;
   const activeCount = state.devices.filter(d => d.power).length;
   const activeEl = document.getElementById('stat-active-lights');
   if (activeEl) activeEl.textContent = `${activeCount} / ${total}`;
 
+  // 2. Metric: Active Z-Audio Zones from DB
   if (state.zaudio && state.zaudio.zones) {
     const activeZones = Object.values(state.zaudio.zones).filter(z => z.power).length;
     const activeZEl = document.getElementById('stat-active-zones');
     if (activeZEl) activeZEl.textContent = `${activeZones} Active Zone${activeZones === 1 ? '' : 's'}`;
   }
 
-  const zone1 = state.zaudio.zones ? state.zaudio.zones[1] : null;
+  // 3. Metric: Climate Temperature from DB (state.hvac)
+  const hvacList = state.hvac || [];
+  const hallAC = hvacList.find(h => h.room === 'Hall' || (h.name && h.name.includes('Hall'))) || hvacList[0];
+  const tempEl = document.getElementById('stat-current-temp');
+  if (tempEl && hallAC) {
+    tempEl.textContent = `${hallAC.currentTemp || 24.5} °C`;
+  }
+
+  // 4. Z-Audio Player Widget from DB
+  const zone1 = state.zaudio && state.zaudio.zones ? state.zaudio.zones[1] : null;
   if (zone1) {
     const trackEl = document.getElementById('overview-track');
     const artistEl = document.getElementById('overview-artist');
@@ -211,32 +243,137 @@ function renderOverviewStats() {
     }
   }
 
-  const quickContainer = document.getElementById('quick-lighting-container');
-  if (quickContainer) {
-    quickContainer.innerHTML = '';
-    state.devices.slice(0, 5).forEach(dev => {
-      const row = document.createElement('div');
-      row.className = 'device-row';
+  // 5. Render Overview Room Filter Chips & Equipment Controls from DB
+  renderOverviewEquipment();
 
-      let iconClass = 'ph-lightbulb';
-      if (dev.type === 'fan') iconClass = 'ph-fan';
-      else if (dev.type === 'rgb') iconClass = 'ph-palette';
+  // 6. Render Overview HVAC Controls from DB
+  renderOverviewHVAC();
+}
 
-      row.innerHTML = `
-        <div class="device-info">
-          <div class="device-icon ${dev.power ? 'on' : ''}">
-            <i class="ph-bold ${iconClass}"></i>
-          </div>
-          <div>
-            <div style="font-weight:600">${dev.name}</div>
-            <div style="font-size:12px;color:var(--text-muted)">${dev.room} &bull; ${dev.type === 'fan' ? 'Fan: ' + (dev.speedName || 'Off') : dev.type}</div>
-          </div>
-        </div>
-        <input type="checkbox" class="toggle-switch" ${dev.power ? 'checked' : ''} onchange="toggleDevicePower('${dev.id}', this.checked)">
-      `;
-      quickContainer.appendChild(row);
+function renderOverviewEquipment() {
+  const chipContainer = document.getElementById('overview-room-chips');
+  const container = document.getElementById('quick-lighting-container');
+  if (!container) return;
+
+  // Extract rooms from DB
+  const rooms = [...new Set(state.devices.map(d => d.room))];
+
+  if (chipContainer) {
+    let chipsHTML = `<button class="filter-chip ${overviewRoomFilter === 'all' ? 'active' : ''}" onclick="setOverviewRoomFilter('all')">All DB Rooms (${state.devices.length})</button>`;
+    rooms.forEach(r => {
+      const count = state.devices.filter(d => d.room === r).length;
+      chipsHTML += `<button class="filter-chip ${overviewRoomFilter === r ? 'active' : ''}" onclick="setOverviewRoomFilter('${r.replace(/'/g, "\\'")}')">${r} (${count})</button>`;
     });
+    chipContainer.innerHTML = chipsHTML;
   }
+
+  // Filter devices by selected room
+  let displayDevs = state.devices;
+  if (overviewRoomFilter !== 'all') {
+    displayDevs = state.devices.filter(d => d.room === overviewRoomFilter);
+  }
+
+  container.innerHTML = '';
+  if (displayDevs.length === 0) {
+    container.innerHTML = `<div style="color:var(--text-muted);font-size:13px;padding:12px;grid-column:1/-1;">No equipment devices found in DB for this room.</div>`;
+    return;
+  }
+
+  displayDevs.forEach(dev => {
+    let iconClass = 'ph-lightbulb';
+    if (dev.type === 'fan') iconClass = 'ph-fan';
+    else if (dev.type === 'rgb') iconClass = 'ph-palette';
+    else if (dev.type === 'dimmer') iconClass = 'ph-sliders';
+
+    let controlHTML = '';
+    if (dev.type === 'fan') {
+      controlHTML = `
+        <div class="fan-speed-chips">
+          <button class="speed-chip ${dev.level === 0 ? 'active' : ''}" onclick="setDeviceLevel('${dev.id}', 0); event.stopPropagation();">Off</button>
+          <button class="speed-chip ${dev.level === 1 ? 'active' : ''}" onclick="setDeviceLevel('${dev.id}', 1); event.stopPropagation();">Low</button>
+          <button class="speed-chip ${dev.level === 2 ? 'active' : ''}" onclick="setDeviceLevel('${dev.id}', 2); event.stopPropagation();">Med</button>
+          <button class="speed-chip ${dev.level === 3 ? 'active' : ''}" onclick="setDeviceLevel('${dev.id}', 3); event.stopPropagation();">High</button>
+        </div>
+      `;
+    } else if (dev.type === 'dimmer') {
+      controlHTML = `
+        <div class="dimmer-control-wrapper">
+          <input type="range" min="0" max="100" value="${dev.level}" class="custom-slider dimmer-slider" onchange="setDeviceLevel('${dev.id}', this.value)" onclick="event.stopPropagation()">
+          <span class="dimmer-val-badge ${dev.power ? 'on' : ''}">${dev.level}%</span>
+        </div>
+      `;
+    }
+
+    const isFanSpinning = dev.type === 'fan' && dev.power && dev.level > 0;
+
+    const row = document.createElement('div');
+    row.className = `device-row ${dev.power ? 'is-on' : ''}`;
+    row.innerHTML = `
+      <div class="device-info">
+        <div class="device-icon ${dev.power ? 'on' : ''} ${isFanSpinning ? 'spinning' : ''}">
+          <i class="ph-bold ${iconClass}"></i>
+        </div>
+        <div class="device-text">
+          <div class="device-name">${dev.name}</div>
+          <div class="device-subtext">${dev.room} &bull; Subnet ${dev.subnet}:${dev.deviceId} ${dev.type === 'fan' ? '&bull; <span class="speed-tag">' + (dev.speedName || 'Off') + '</span>' : ''}</div>
+        </div>
+      </div>
+
+      <div class="device-actions">
+        ${controlHTML}
+        <input type="checkbox" class="toggle-switch" ${dev.power ? 'checked' : ''} onchange="toggleDevicePower('${dev.id}', this.checked)" onclick="event.stopPropagation()">
+      </div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function setOverviewRoomFilter(room) {
+  overviewRoomFilter = room;
+  renderOverviewEquipment();
+}
+
+function renderOverviewHVAC() {
+  const container = document.getElementById('overview-hvac-container');
+  if (!container) return;
+
+  const hvacList = state.hvac || [];
+  container.innerHTML = '';
+
+  if (hvacList.length === 0) {
+    container.innerHTML = `<div style="color:var(--text-muted);font-size:13px;">No HVAC units in DB</div>`;
+    return;
+  }
+
+  hvacList.forEach(unit => {
+    const row = document.createElement('div');
+    row.className = `device-row ${unit.power ? 'is-on' : ''}`;
+    row.innerHTML = `
+      <div class="device-info">
+        <div class="device-icon ${unit.power ? 'on' : ''}">
+          <i class="ph-bold ph-snowflake"></i>
+        </div>
+        <div class="device-text">
+          <div class="device-name">${unit.name}</div>
+          <div class="device-subtext">${unit.room} &bull; Room: ${unit.currentTemp}°C &bull; Target: ${unit.targetTemp}°C</div>
+        </div>
+      </div>
+
+      <div class="device-actions">
+        <div style="display:flex;align-items:center;gap:6px">
+          <button class="btn-icon" style="width:26px;height:26px" onclick="setHVACOverviewTemp('${unit.id}', ${unit.targetTemp - 1})">-</button>
+          <span style="font-weight:700;font-size:13px;width:38px;text-align:center">${unit.targetTemp}°C</span>
+          <button class="btn-icon" style="width:26px;height:26px" onclick="setHVACOverviewTemp('${unit.id}', ${unit.targetTemp + 1})">+</button>
+        </div>
+        <input type="checkbox" class="toggle-switch" ${unit.power ? 'checked' : ''} onchange="toggleHVACPower('${unit.id}', this.checked)">
+      </div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function setHVACOverviewTemp(id, targetTemp) {
+  sendWS('CONTROL_HVAC', { id, updates: { targetTemp } });
 }
 
 // -------------------------------------------------------------
@@ -900,6 +1037,16 @@ function saveMQTTConfig(e) {
   alert('MQTT Broker configuration saved! Reconnecting...');
 }
 
+async function publishHADiscoveryNow() {
+  try {
+    const res = await fetch('/api/ha/discovery', { method: 'POST' });
+    const data = await res.json();
+    alert('Home Assistant MQTT Auto-Discovery published! All lights, switches, fans, climate & curtains are now broadcast to Home Assistant.');
+  } catch (err) {
+    alert('Failed to publish discovery: ' + err.message);
+  }
+}
+
 // -------------------------------------------------------------
 // Settings
 // -------------------------------------------------------------
@@ -920,4 +1067,159 @@ function saveSettings(e) {
   });
 
   alert('Configuration updated successfully!');
+}
+
+// -------------------------------------------------------------
+// Alexa Diagnostics & Voice Simulator
+// -------------------------------------------------------------
+let alexaCachedDevices = [];
+
+async function loadAlexaStatus() {
+  try {
+    const res = await fetch('/api/alexa/status');
+    const data = await res.json();
+
+    const ipEl = document.getElementById('alexa-bridge-ip');
+    const portEl = document.getElementById('alexa-bridge-port');
+    const countEl = document.getElementById('alexa-bridge-device-count');
+    const badgeEl = document.getElementById('alexa-bridge-badge');
+
+    if (ipEl) ipEl.textContent = data.hostIp || '127.0.0.1';
+    if (portEl) portEl.textContent = `Port ${data.advertisedPort || 80}`;
+    if (countEl) countEl.textContent = data.deviceCount || 0;
+    if (badgeEl) {
+      badgeEl.innerHTML = `<i class="ph-bold ph-broadcast"></i> Bridge Active (${data.hostIp}:${data.advertisedPort})`;
+    }
+
+    alexaCachedDevices = data.devices || [];
+    populateAlexaSimulator(alexaCachedDevices);
+    renderAlexaTable(alexaCachedDevices);
+  } catch (e) {
+    console.warn('[Alexa UI] Failed to load bridge status:', e.message);
+  }
+}
+
+function populateAlexaSimulator(devices) {
+  const select = document.getElementById('alexa-sim-device');
+  if (!select) return;
+
+  if (!devices || devices.length === 0) {
+    select.innerHTML = '<option value="">No devices exposed</option>';
+    return;
+  }
+
+  select.innerHTML = devices.map(d =>
+    `<option value="${d.numericId}">[ID: ${d.numericId}] ${d.name} (${d.on ? 'ON' : 'OFF'} - ${Math.round((d.bri/254)*100)}%)</option>`
+  ).join('');
+}
+
+function renderAlexaTable(devices) {
+  const tbody = document.getElementById('alexa-devices-tbody');
+  if (!tbody) return;
+
+  if (!devices || devices.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text-muted)">No devices exposed to Alexa</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = devices.map(d => `
+    <tr style="border-bottom:1px solid var(--border-color)">
+      <td style="padding:10px 14px;color:var(--accent-cyan);font-weight:600">${d.numericId}</td>
+      <td style="padding:10px 14px;font-weight:500;color:#fff">${escapeHtml(d.name)}</td>
+      <td style="padding:10px 14px;color:var(--text-muted);font-size:12px">${d.type}</td>
+      <td style="padding:10px 14px">
+        <span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;background:${d.on ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'};color:${d.on ? 'var(--accent-emerald)' : '#f87171'}">
+          ${d.on ? 'ON' : 'OFF'}
+        </span>
+      </td>
+      <td style="padding:10px 14px;color:var(--text-muted)">${Math.round((d.bri / 254) * 100)}%</td>
+      <td style="padding:10px 14px;text-align:right">
+        <button class="btn-secondary" style="padding:4px 8px;font-size:11px" onclick="quickToggleAlexa('${d.numericId}', ${!d.on})">
+          ${d.on ? 'Turn Off' : 'Turn On'}
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterAlexaDevices(term) {
+  const query = (term || '').toLowerCase().trim();
+  if (!query) {
+    renderAlexaTable(alexaCachedDevices);
+    return;
+  }
+  const filtered = alexaCachedDevices.filter(d =>
+    d.name.toLowerCase().includes(query) || d.numericId.includes(query) || d.type.toLowerCase().includes(query)
+  );
+  renderAlexaTable(filtered);
+}
+
+async function simulateAlexaCommand(power) {
+  const select = document.getElementById('alexa-sim-device');
+  const id = select ? select.value : null;
+  if (!id) return alert('Please select a device to simulate voice command.');
+
+  const resultEl = document.getElementById('alexa-sim-result');
+  try {
+    const res = await fetch(`/api/alexa/lights/${id}/state`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ on: power })
+    });
+    const data = await res.json();
+    if (resultEl) {
+      resultEl.style.display = 'block';
+      resultEl.style.color = 'var(--accent-emerald)';
+      resultEl.textContent = `[Alexa Emulation Success] PUT /api/alexa/lights/${id}/state -> ` + JSON.stringify(data);
+    }
+    loadAlexaStatus();
+  } catch (err) {
+    if (resultEl) {
+      resultEl.style.display = 'block';
+      resultEl.style.color = '#f87171';
+      resultEl.textContent = `[Alexa Emulation Error] ` + err.message;
+    }
+  }
+}
+
+async function simulateAlexaDim() {
+  const select = document.getElementById('alexa-sim-device');
+  const id = select ? select.value : null;
+  const bri = parseInt(document.getElementById('alexa-sim-bri').value) || 128;
+  if (!id) return alert('Please select a device.');
+
+  const resultEl = document.getElementById('alexa-sim-result');
+  try {
+    const res = await fetch(`/api/alexa/lights/${id}/state`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ on: true, bri })
+    });
+    const data = await res.json();
+    if (resultEl) {
+      resultEl.style.display = 'block';
+      resultEl.style.color = 'var(--accent-emerald)';
+      resultEl.textContent = `[Alexa Emulation Success] PUT /api/alexa/lights/${id}/state -> ` + JSON.stringify(data);
+    }
+    loadAlexaStatus();
+  } catch (err) {
+    if (resultEl) {
+      resultEl.style.display = 'block';
+      resultEl.style.color = '#f87171';
+      resultEl.textContent = `[Alexa Emulation Error] ` + err.message;
+    }
+  }
+}
+
+async function quickToggleAlexa(id, power) {
+  try {
+    await fetch(`/api/alexa/lights/${id}/state`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ on: power })
+    });
+    loadAlexaStatus();
+  } catch (e) {
+    console.error('Quick toggle error:', e);
+  }
 }
