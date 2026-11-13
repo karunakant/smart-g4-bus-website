@@ -11,6 +11,18 @@ An end-to-end Home Automation & Multi-Zone Audio System designed for **SmartBus 
 
 ---
 
+## 📚 User Manuals & Quick Guides
+
+Comprehensive, step-by-step guides written specifically for layman users:
+
+| Document | Description | Target Platform |
+| :--- | :--- | :--- |
+| 📖 **[Installation & Operator's Manual](docs/INSTALLATION_MANUAL.md)** | Step-by-step layman guide to install and run the system with Docker, configure Home Assistant MQTT auto-discovery, and set up Amazon Alexa voice control. | **Raspberry Pi 4** & **Windows 11** |
+| 🗄️ **[Database Management & Search Manual](docs/DATABASE_MANUAL.md)** | Comprehensive guide explaining the SQLite database architecture (`SMART-G4.sqlite3`), 4 simple ways to populate rooms/devices, and 3 ways to search data. | Cross-platform |
+| 🛠️ **[Interactive Database CLI (`manage_db.py`)](scripts/manage_db.py)** | Easy command-line tool for listing rooms, viewing equipment, searching devices, and adding new switches/fans without touching SQL. | Python 3 (CLI) |
+
+---
+
 ## 📐 Technical Architecture
 
 ```
@@ -61,7 +73,7 @@ All core backend configuration settings can be customized in `docker-compose.yml
 
 ## ➕ How to Add Devices & Channels
 
-Devices can be added using **3 different methods**: automatically via the UI Scanner, interactively using the UI setup form, or manually by editing `data/devices.json`.
+Devices can be added using **4 different methods**: automatically via the UI Scanner, interactively using the UI setup form, using the official SQLite database / CLI tool, or manually by editing `data/devices.json`.
 
 ---
 
@@ -156,6 +168,22 @@ You can edit `data/devices.json` directly using a text editor.
 
 ---
 
+### Method 4: Official Master SQLite Database & CLI Tool (Recommended)
+
+You can manage all your rooms, relays, dimmers, and fans directly in the master database (`db/SMART-G4.sqlite3`) or with the included command-line helper:
+- **Drop-in Official Backup**: Simply copy your existing `SMART-G4.sqlite3` from the SmartBus G4 Windows software or Android app directly into the `db/` folder.
+- **Visual GUI Editing**: Open `db/SMART-G4.sqlite3` in [DB Browser for SQLite](https://sqlitebrowser.org/) to view and edit `Zones`, `LightInZone`, and `FanInZone`.
+- **Interactive CLI Helper**: Use [`scripts/manage_db.py`](scripts/manage_db.py) to add rooms and devices in seconds:
+  ```bash
+  python scripts/manage_db.py add-room "Balcony"
+  python scripts/manage_db.py add-light --room "Balcony" --name "Wall Light" --subnet 1 --device 47 --channel 7
+  python scripts/manage_db.py add-fan --room "Balcony" --name "Exhaust Fan" --subnet 1 --device 44 --channel 1
+  python scripts/manage_db.py search "Kitchen"
+  ```
+👉 For complete database schema details, step-by-step screenshots, and SQL search recipes, refer to the **[Database Management & Search Manual](docs/DATABASE_MANUAL.md)**.
+
+---
+
 ## 🎙️ Amazon Alexa Local Voice Control
 
 This application includes a built-in **SSDP/UPnP Local Bridge** (`lib/alexa-bridge.js`) that emulates a Philips Hue Bridge.
@@ -247,6 +275,9 @@ You can run this setup across **multiple physical locations** (e.g., Home 1 & Ho
 ---
 
 ## 🚀 Quick Start with Docker
+
+> [!TIP]
+> For a complete beginner's step-by-step setup guide for both **Raspberry Pi 4** and **Windows 11** (including package installation, Docker setup, firewall configuration, systemd services, and startup boot scripts), see the **[Installation & Operator's Manual](docs/INSTALLATION_MANUAL.md)**.
 
 ### 1. Start Containers:
 ```bash
