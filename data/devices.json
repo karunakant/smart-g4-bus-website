@@ -52,8 +52,8 @@
       "subnet": 1,
       "deviceId": 47,
       "channel": 23,
-      "power": false,
-      "level": 0
+      "power": true,
+      "level": 100
     },
     "dev_z3_l6": {
       "id": "dev_z3_l6",
@@ -434,8 +434,8 @@
       "subnet": 1,
       "deviceId": 60,
       "channel": 13,
-      "power": true,
-      "level": 100
+      "power": false,
+      "level": 0
     },
     "dev_z5_l10": {
       "id": "dev_z5_l10",
@@ -1003,7 +1003,7 @@
       "channel": 2,
       "power": false,
       "targetTemp": 22,
-      "currentTemp": 25.0,
+      "currentTemp": 25,
       "mode": "cool",
       "fanSpeed": "low"
     },
@@ -1016,7 +1016,7 @@
       "channel": 3,
       "power": false,
       "targetTemp": 23,
-      "currentTemp": 24.0,
+      "currentTemp": 24,
       "mode": "cool",
       "fanSpeed": "medium"
     },
@@ -1056,5 +1056,5 @@
       "state": "idle"
     }
   },
-  "convertedFromSqlite": true
+  "savedAt": "2026-11-13T20:56:01.893Z"
 }
