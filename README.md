@@ -1,13 +1,22 @@
-# SmartBus G4 Home Automation & Z-Audio Controller
+# SmartBus G4 Home Automation, Home Assistant & Alexa Controller
 
-An end-to-end Home Automation & Multi-Zone Audio System designed for **SmartBus G4 (HDL Buspro / S-Bus)** protocol hardware, integrated with **Z-Audio Multi-Zone Controllers (via SmartBus IP Gateway `192.168.0.200`)**, hosted via **Docker Containers**, featuring an ultra-modern glassmorphic Web Dashboard, **SmartBus Subnet Scanner & Setup Manager**, **Nginx Reverse Proxy**, and **Amazon Alexa Local Voice Control**.
+An end-to-end Home Automation & Multi-Zone Audio System designed for **SmartBus G4 (HDL Buspro / S-Bus)** protocol hardware, integrated with **Home Assistant (Instant MQTT Auto-Discovery for 87+ Entities)**, **Amazon Alexa (Local Voice Control via Philips Hue Bridge Emulation)**, and **Z-Audio Multi-Zone Controllers (via SmartBus IP Gateway `192.168.0.200`)**, hosted via **Docker Containers**, featuring an ultra-modern glassmorphic Web Dashboard, **SmartBus Subnet Scanner & Setup Manager**, and dynamic zero-hardcoding LAN network resolution.
 
-![SmartBus Scanner](https://img.shields.io/badge/SmartBus_Scanner-Subnet_1--255-10b981?style=for-the-badge)
+![Home Assistant](https://img.shields.io/badge/Home_Assistant-MQTT_Auto--Discovery-41bdf5?style=for-the-badge&logo=home-assistant)
+![Mosquitto MQTT](https://img.shields.io/badge/Mosquitto_MQTT-Port_1883-660066?style=for-the-badge&logo=eclipse-mosquitto)
 ![Alexa Voice Ready](https://img.shields.io/badge/Amazon_Alexa-Voice_Control_Ready-ff9900?style=for-the-badge&logo=alexa)
 ![Docker Ready](https://img.shields.io/badge/Docker-Container_Ready-06b6d4?style=for-the-badge&logo=docker)
-![Nginx Proxy](https://img.shields.io/badge/Nginx_Proxy-Port_80-009639?style=for-the-badge&logo=nginx)
 ![SmartBus G4](https://img.shields.io/badge/SmartBus_G4-UDP_Port_6000-6366f1?style=for-the-badge)
 ![SmartBus Gateway](https://img.shields.io/badge/SmartBus_Gateway-192.168.0.200-10b981?style=for-the-badge)
+
+---
+
+## 🌟 Key Highlights
+
+- 🏡 **Home Assistant MQTT Auto-Discovery**: Automatically exposes all 87+ SmartBus lights, switches, dimmers, fans, and curtains into Home Assistant (`homeassistant/#`) with clean room-prefixed entity names (e.g., `Kitchen Spot 1`, `Kitchen Fan`) and automatic area assignments with zero manual YAML.
+- 🎙️ **Amazon Alexa Local Voice Control**: Zero-cloud Philips Hue bridge emulator responds to local UPnP SSDP multicast (Port 1900 / 80) so all Echo devices can discover and control switches and fans natively.
+- 🌐 **Zero Hardcoded IPs**: Dynamically binds to your server's current physical Wi-Fi / Ethernet LAN IP (`HOST_IP=auto`), adapting automatically if DHCP changes your router IP.
+- 🐳 **Cross-Platform Docker Stack**: Pre-configured multi-container stack (Node.js engine + Mosquitto MQTT broker) running smoothly on both **Raspberry Pi 4** and **Windows 11**.
 
 ---
 
@@ -26,18 +35,19 @@ Comprehensive, step-by-step guides written specifically for layman users:
 ## 📐 Technical Architecture
 
 ```
-                    ┌─────────────────────────────────────────┐
-                    │      Amazon Echo / Alexa Device         │
-                    │  ("Alexa, turn on Kitchen Spot 1")      │
-                    └────────────────────┬────────────────────┘
-                                         │ Local UPnP SSDP Multicast (Port 1900)
-                                         ▼
                     ┌─────────────────────────────────────────┐      ┌─────────────────────────────┐
-                    │      SmartBus Node.js Container         │ ───► │ Mosquitto MQTT Container    │
+                    │      Amazon Echo / Alexa Device         │      │       Home Assistant        │
+                    │  ("Alexa, turn on Kitchen Spot 1")      │      │  (MQTT Auto-Discovery 87+)  │
+                    └────────────────────┬────────────────────┘      └──────────────┬──────────────┘
+                                         │ UPnP SSDP Multicast (Port 1900/80)       │ MQTT Port 1883
+                                         ▼                                          ▼
+                    ┌─────────────────────────────────────────┐      ┌─────────────────────────────┐
+                    │      SmartBus Node.js Container         │ ───► │ Mosquitto MQTT Broker       │
                     │  - Dual HTTP: Web (3000) & Alexa (80)   │ ◄─── │ (Port 1883 / WebSockets 9001)│
-                    │  - Network Mode: Host (UDP Broadcast)   │      └─────────────────────────────┘
+                    │  - Dynamic Network IP Auto-Detection    │      └─────────────────────────────┘
                     │  - SmartBus Subnet Scanner Engine       │
                     │  - Alexa SSDP / Hue Bridge Emulator     │
+                    │  - Home Assistant MQTT Discovery Queue  │
                     │  - Priority Command Queue Engine        │
                     │  - SmartBus & Z-Audio UDP Driver        │
                     └────────────────────┬────────────────────┘
@@ -62,7 +72,7 @@ All core backend configuration settings can be customized in `docker-compose.yml
 | :--- | :--- | :--- |
 | `PORT` | `6080` (or `3000`) | Internal TCP port for Express REST API & WebSockets server. |
 | `EXTERNAL_PORT` | `80` | External HTTP port advertised in SSDP UPnP headers for Alexa Echo discovery. |
-| `HOST_IP` | `192.168.0.205` | Static IPv4 LAN address of your Raspberry Pi / host server. |
+| `HOST_IP` | `auto` | Dynamic IPv4 LAN address of host (auto-detected, no hardcoded IPs needed). |
 | `UDP_PORT` | `6000` | Standard SmartBus G4 binary datagram UDP port. |
 | `GATEWAY_IP` | `192.168.0.200` | LAN IP address of your physical SmartBus G4 IP Gateway. |
 | `ZAUDIO_IP` | `192.168.0.200` | LAN IP address of your Z-Audio RSIP Gateway. |
@@ -246,10 +256,11 @@ This application includes seamless **Home Assistant MQTT Auto-Discovery** (`home
 1. In Home Assistant, navigate to **Settings** ➔ **Devices & Services** ➔ **+ Add Integration**.
 2. Search for **MQTT** and select it.
 3. Configure connection:
-   - **Broker**: `<smartbus-server-ip>` (e.g. `192.168.0.24` or Raspberry Pi IP)
+   - **Broker**: `<smartbus-server-ip>` *(e.g. your Raspberry Pi IP `192.168.0.205` or Windows PC IP `192.168.0.18`)*
    - **Port**: `1883`
    - **Username / Password**: Leave blank (anonymous enabled by default).
-4. Click **Submit**. Home Assistant will immediately discover all 90+ SmartBus devices!
+4. Click **Submit**. Home Assistant will immediately discover all 87+ SmartBus devices!
+5. **Clean Entity Names**: All entities retain their natural room-prefixed names (e.g., `Kitchen Spot 1`, `Kitchen Fan`, `Parents Bedroom Wall Light`, `Hall Main Curtain`) and are automatically grouped into their respective room areas.
 
 #### Method B: Connect SmartBus to your existing Home Assistant Mosquitto Broker
 If you already run the Home Assistant Mosquitto MQTT Add-on:
@@ -259,6 +270,10 @@ If you already run the Home Assistant Mosquitto MQTT Add-on:
    - **Username / Password**: Your Home Assistant MQTT user credentials.
 3. Click **Connect & Save Settings**.
 4. Click **Sync with Home Assistant Now**. All entities will broadcast directly into your existing broker.
+
+> [!TIP]
+> **Integrating Third-Party Smart Devices (Wipro, Tuya, Smart Life, Sonoff)**:
+> If you have wireless smart devices such as Wipro smart plugs, bulbs, or fan switches, connect them directly to Home Assistant using the official **Tuya / Smart Life integration** (or **LocalTuya** for local control). Once integrated, Home Assistant unifies your wired SmartBus G4 installation and wireless Wipro smart devices in a single dashboard, allowing cross-system automations (e.g. turning on a SmartBus wall light when a Wipro motion sensor triggers).
 
 ---
 
