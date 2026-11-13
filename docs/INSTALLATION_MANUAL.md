@@ -246,6 +246,8 @@ Your SmartBus server includes an integrated **Priority Command Queue** and **Hom
 4. Click **Submit**.
 5. Home Assistant will instantly discover all **87+ SmartBus devices** with clean names (e.g., `Kitchen Spot 1`, `Kitchen Fan`, `Hall Main Curtain`, `Parents Bedroom Wall Light`) and automatic room areas.
 
+👉 **For advanced Lovelace card examples, automation recipes, and setting up wireless Wipro plugs/fans, see the dedicated [Home Assistant Setup Manual](HOME_ASSISTANT_MANUAL.md)**.
+
 ---
 
 ## Part 4: Connecting to Amazon Alexa (Voice Control)

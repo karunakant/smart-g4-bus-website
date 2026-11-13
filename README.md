@@ -27,6 +27,7 @@ Comprehensive, step-by-step guides written specifically for layman users:
 | Document | Description | Target Platform |
 | :--- | :--- | :--- |
 | 📖 **[Installation & Operator's Manual](docs/INSTALLATION_MANUAL.md)** | Step-by-step layman guide to install and run the system with Docker, configure Home Assistant MQTT auto-discovery, and set up Amazon Alexa voice control. | **Raspberry Pi 4** & **Windows 11** |
+| 🏡 **[Home Assistant Setup Manual](docs/HOME_ASSISTANT_MANUAL.md)** | Comprehensive guide for Home Assistant MQTT auto-discovery, entity controls (lights, fans, climate), Lovelace cards, automations, and adding Wipro/Tuya devices. | **Home Assistant** (All platforms) |
 | 🗄️ **[Database Management & Search Manual](docs/DATABASE_MANUAL.md)** | Comprehensive guide explaining the SQLite database architecture (`SMART-G4.sqlite3`), 4 simple ways to populate rooms/devices, and 3 ways to search data. | Cross-platform |
 | 🛠️ **[Interactive Database CLI (`manage_db.py`)](scripts/manage_db.py)** | Easy command-line tool for listing rooms, viewing equipment, searching devices, and adding new switches/fans without touching SQL. | Python 3 (CLI) |
 
@@ -238,7 +239,9 @@ This application includes a built-in **SSDP/UPnP Local Bridge** (`lib/alexa-brid
 
 ## 🏡 Home Assistant MQTT Integration
 
-This application includes seamless **Home Assistant MQTT Auto-Discovery** (`homeassistant/#`). All 90+ SmartBus G4 devices instantly appear in your Home Assistant dashboard with zero manual YAML required!
+This application includes seamless **Home Assistant MQTT Auto-Discovery** (`homeassistant/#`). All 87+ SmartBus G4 devices instantly appear in your Home Assistant dashboard with zero manual YAML required!
+
+👉 **[Read the complete Home Assistant Setup Manual (docs/HOME_ASSISTANT_MANUAL.md)](docs/HOME_ASSISTANT_MANUAL.md)** for detailed click-by-click instructions, Lovelace dashboard cards, automation recipes, and setting up wireless Wipro plugs/fans.
 
 ### Auto-Discovered Entity Types:
 - **Lights** (`light.*`): SmartBus dimmers & RGB accent lights with on/off, 0–100% brightness sliders, and RGB color wheel.
