@@ -19,8 +19,16 @@ import os
 
 MCAST_GRP = '239.255.255.250'
 MCAST_PORT = 1900
-BRIDGE_ID = '001788FFFE09D74D'
-BRIDGE_UUID = '2f402f80-da50-11e1-9b23-00178809d74d'
+
+def get_bridge_identifiers(ip):
+    """
+    Derives unique Bridge ID and UUID from the host IP suffix.
+    Guarantees zero network collisions even if multiple bridges (e.g. Raspberry Pi + PC) run on the same LAN.
+    """
+    suffix = ip.split('.')[-1].zfill(2)[-2:]
+    bridge_id = f'001788FFFE09D7{suffix.upper()}'
+    bridge_uuid = f'2f402f80-da50-11e1-9b23-00178809d7{suffix.lower()}'
+    return bridge_id, bridge_uuid
 
 def get_dynamic_ip(target_ip='8.8.8.8'):
     """
@@ -91,6 +99,7 @@ def sync_central_network(detected_ip):
         pass
 
 def build_ssdp_packets(host_ip, port):
+    bridge_id, bridge_uuid = get_bridge_identifiers(host_ip)
     base_headers = [
         "HTTP/1.1 200 OK",
         "HOST: 239.255.255.250:1900",
@@ -98,34 +107,87 @@ def build_ssdp_packets(host_ip, port):
         "EXT:",
         f"LOCATION: http://{host_ip}:{port}/description.xml",
         "SERVER: FreeRTOS/7.4.2 UPnP/1.0 IpBridge/1.17.0",
-        f"hue-bridgeid: {BRIDGE_ID}"
+        f"hue-bridgeid: {bridge_id}"
     ]
 
     resp_basic = "\r\n".join(base_headers + [
         "ST: urn:schemas-upnp-org:device:basic:1",
-        f"USN: uuid:{BRIDGE_UUID}::urn:schemas-upnp-org:device:basic:1",
+        f"USN: uuid:{bridge_uuid}::urn:schemas-upnp-org:device:basic:1",
         "", ""
     ]).encode('utf-8')
 
     resp_basic_cap = "\r\n".join(base_headers + [
         "ST: urn:schemas-upnp-org:device:Basic:1",
-        f"USN: uuid:{BRIDGE_UUID}::urn:schemas-upnp-org:device:Basic:1",
+        f"USN: uuid:{bridge_uuid}::urn:schemas-upnp-org:device:Basic:1",
         "", ""
     ]).encode('utf-8')
 
     resp_root = "\r\n".join(base_headers + [
         "ST: upnp:rootdevice",
-        f"USN: uuid:{BRIDGE_UUID}::upnp:rootdevice",
+        f"USN: uuid:{bridge_uuid}::upnp:rootdevice",
         "", ""
     ]).encode('utf-8')
 
     resp_uuid = "\r\n".join(base_headers + [
-        f"ST: uuid:{BRIDGE_UUID}",
-        f"USN: uuid:{BRIDGE_UUID}",
+        f"ST: uuid:{bridge_uuid}",
+        f"USN: uuid:{bridge_uuid}",
         "", ""
     ]).encode('utf-8')
 
     return [resp_basic, resp_basic_cap, resp_root, resp_uuid]
+
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import urllib.request
+import threading
+
+class HueProxyHandler(BaseHTTPRequestHandler):
+    backend_port = 3000
+
+    def do_GET(self):
+        self.proxy_request('GET')
+
+    def do_POST(self):
+        self.proxy_request('POST')
+
+    def do_PUT(self):
+        self.proxy_request('PUT')
+
+    def proxy_request(self, method):
+        target_url = f"http://127.0.0.1:{self.backend_port}{self.path}"
+        try:
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length) if content_length > 0 else None
+            
+            headers = {k: v for k, v in self.headers.items() if k.lower() not in ['host', 'content-length']}
+            headers['Host'] = self.headers.get('Host', '')
+
+            req = urllib.request.Request(target_url, data=body, headers=headers, method=method)
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                self.send_response(resp.status)
+                for k, v in resp.getheaders():
+                    if k.lower() not in ['transfer-encoding']:
+                        self.send_header(k, v)
+                self.end_headers()
+                self.wfile.write(resp.read())
+        except Exception as e:
+            self.send_response(502)
+            self.end_headers()
+            self.wfile.write(f"Proxy error: {e}".encode('utf-8'))
+
+    def log_message(self, format, *args):
+        print(f"[Alexa Bridge HTTP Proxy] {self.address_string()} - {format % args}", flush=True)
+
+def start_http_proxy(port=80, backend_port=3000):
+    try:
+        HueProxyHandler.backend_port = backend_port
+        httpd = HTTPServer(('0.0.0.0', port), HueProxyHandler)
+        t = threading.Thread(target=httpd.serve_forever, daemon=True)
+        t.start()
+        print(f"[Alexa Bridge] Host HTTP proxy online on Port {port} -> 127.0.0.1:{backend_port}", flush=True)
+        return httpd
+    except Exception as e:
+        print(f"[Alexa Bridge] Host Port {port} proxy status: {e}", flush=True)
+        return None
 
 def main():
     port = int(sys.argv[2]) if len(sys.argv) > 2 else 80
@@ -140,12 +202,26 @@ def main():
     print(f" Multicast Group      : {MCAST_GRP}:{MCAST_PORT}", flush=True)
     print("=" * 65, flush=True)
 
+    # Start host-side HTTP proxy on Port 80 (bypasses Windows Firewall Docker restrictions)
+    start_http_proxy(port=port, backend_port=3000)
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind(('', MCAST_PORT))
 
-    mreq = struct.pack('4sl', socket.inet_aton(MCAST_GRP), socket.INADDR_ANY)
-    sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+    # Join multicast specifically on the active LAN IP interface (not just INADDR_ANY, which picks WSL virtual adapter on Windows)
+    try:
+        mreq_if = struct.pack('4s4s', socket.inet_aton(MCAST_GRP), socket.inet_aton(initial_ip))
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq_if)
+        print(f"[Alexa Bridge] Joined multicast group {MCAST_GRP} on physical interface {initial_ip}", flush=True)
+    except Exception as e:
+        print(f"[Alexa Bridge] Interface join warning for {initial_ip}: {e}", flush=True)
+
+    try:
+        mreq_any = struct.pack('4sl', socket.inet_aton(MCAST_GRP), socket.INADDR_ANY)
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq_any)
+    except Exception:
+        pass
 
     print("[Ready] Dynamically listening for Amazon Echo 'Discover Devices'...", flush=True)
     print("Zero hardcoded IPs. Press Ctrl+C to stop.\n", flush=True)

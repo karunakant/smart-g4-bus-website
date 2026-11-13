@@ -254,3 +254,15 @@
 1794598728: Client smartbus-pi-9828 closed its connection.
 1794598729: New connection from 172.18.0.3:33154 on port 1883.
 1794598729: New client connected from 172.18.0.3:33154 as smartbus-pi-6805 (p2, c1, k60).
+1794599394: Client smartbus-pi-6805 closed its connection.
+1794599395: New connection from 172.18.0.3:45140 on port 1883.
+1794599395: New client connected from 172.18.0.3:45140 as smartbus-pi-1955 (p2, c1, k60).
+1794600077: Client smartbus-pi-1955 closed its connection.
+1794600078: New connection from 172.18.0.3:32968 on port 1883.
+1794600078: New client connected from 172.18.0.3:32968 as smartbus-pi-7406 (p2, c1, k60).
+1794600101: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1794600185: Client smartbus-pi-7406 closed its connection.
+1794600186: New connection from 172.18.0.3:46892 on port 1883.
+1794600186: New client connected from 172.18.0.3:46892 as smartbus-pi-6258 (p2, c1, k60).
+1794600337: mosquitto version 2.0.22 terminating
+1794600337: Saving in-memory database to /mosquitto/data//mosquitto.db.
