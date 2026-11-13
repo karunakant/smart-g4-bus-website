@@ -34,7 +34,7 @@ services:
       - PORT=3000
       - EXTERNAL_PORT=80
       - ALEXA_PORT=80
-      - HOST_IP=${HOST_IP:-192.168.0.18} # LAN IP of host machine for Amazon Echo and Home Assistant discovery
+      - HOST_IP=${HOST_IP:-auto} # Central dynamic host network resolution (data/network.json)
       - UDP_PORT=6000
       - GATEWAY_IP=192.168.0.200
       - ZAUDIO_IP=192.168.0.200

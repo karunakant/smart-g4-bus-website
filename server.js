@@ -19,6 +19,7 @@ const deviceManager = require('./lib/device-manager');
 const SmartBusSimulator = require('./lib/smartbus-simulator');
 const AlexaBridge = require('./lib/alexa-bridge');
 const mqttQueueService = require('./lib/mqtt-queue-service');
+const hostNetwork = require('./lib/host-network');
 
 const PORT = process.env.PORT || 3000;
 const UDP_PORT = process.env.UDP_PORT || 6000;
@@ -28,9 +29,24 @@ const ZAUDIO_DEFAULT_IP = process.env.ZAUDIO_IP || GATEWAY_DEFAULT_IP;
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ noServer: true });
+
+// Attach WebSocket upgrade listener to primary HTTP server (Port 3000)
+server.on('upgrade', (request, socket, head) => {
+  wss.handleUpgrade(request, socket, head, (ws) => {
+    wss.emit('connection', ws, request);
+  });
+});
 
 app.use(cors());
+app.use((req, res, next) => {
+  hostNetwork.recordFromRequest(req);
+  if (req.url.startsWith('/description.xml') || req.url.startsWith('/api')) {
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+    console.log(`[Alexa Bridge HTTP] ${req.method} ${req.url} from ${clientIp} (Host: ${req.headers.host || 'none'})`);
+  }
+  next();
+});
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -180,15 +196,13 @@ function sendSmartBusUDP(packetOptions) {
     });
   }
 
-  const ipParts = currentGatewayIp.split('.');
-  const subnetBroadcastIp = (ipParts.length === 4) ? `${ipParts[0]}.${ipParts[1]}.${ipParts[2]}.255` : '192.168.0.255';
+  const subnetBroadcastIp = hostNetwork.getSubnetBroadcast(currentGatewayIp);
 
   const targetIPs = [
     ...new Set([
       currentGatewayIp,
       subnetBroadcastIp,
-      '255.255.255.255',
-      '192.168.0.255'
+      '255.255.255.255'
     ])
   ];
 
@@ -208,7 +222,7 @@ function sendSmartBusUDP(packetOptions) {
 // Connect Alexa Bridge with Priority Queue & UDP Dispatcher
 alexaBridge.setQueueService(mqttQueueService);
 alexaBridge.setSendSmartBusUDP(sendSmartBusUDP);
-alexaBridge.startPort80Listener(app);
+alexaBridge.startPort80Listener(app, wss);
 
 // -------------------------------------------------------------
 // WebSocket Realtime Connection Handling
@@ -383,7 +397,8 @@ async function handleWebSocketMessage(msg, ws) {
 // -------------------------------------------------------------
 app.get('/description.xml', (req, res) => {
   res.type('application/xml');
-  res.send(alexaBridge.getDescriptionXML(req.hostname || alexaBridge.getLocalIP()));
+  const hostIP = req.headers.host || req.hostname;
+  res.send(alexaBridge.getDescriptionXML(hostIP));
 });
 
 // Bridge Pairing & Authorization Endpoint (Amazon Echo handshake)
@@ -393,12 +408,14 @@ app.post(['/api', '/api/'], (req, res) => {
 
 // Hue Bridge Config Endpoints
 app.get(['/api/config', '/api/:username/config'], (req, res) => {
-  res.json(alexaBridge.getConfig());
+  const hostIP = req.headers.host || req.hostname;
+  res.json(alexaBridge.getConfig(hostIP));
 });
 
 // Hue Full State / Discovery Endpoint
-app.get('/api/:username', (req, res) => {
-  res.json(alexaBridge.getFullState(req.params.username));
+app.get(['/api', '/api/', '/api/:username'], (req, res) => {
+  const hostIP = req.headers.host || req.hostname;
+  res.json(alexaBridge.getFullState(req.params.username || 'api', hostIP));
 });
 
 // Lights Listing Endpoints
@@ -444,7 +461,7 @@ app.get('/api/alexa/status', (req, res) => {
     enabled: alexaBridge.enabled,
     bridgeId: alexaBridge.bridgeId,
     macAddress: alexaBridge.macAddress,
-    hostIp: alexaBridge.getLocalIP(),
+    hostIp: hostNetwork.getHostIP(req),
     advertisedPort: alexaBridge.externalPort || PORT,
     primaryPort: PORT,
     ssdpMulticast: '239.255.255.250:1900',
@@ -471,7 +488,7 @@ app.get('/api/status', (req, res) => {
     serverTime: new Date().toISOString(),
     alexaBridge: {
       enabled: alexaBridge.enabled,
-      hostIp: alexaBridge.getLocalIP(),
+      hostIp: hostNetwork.getHostIP(req),
       port: alexaBridge.externalPort || PORT,
       primaryPort: PORT,
       discoveredDevicesCount: Object.keys(alexaBridge.getAlexaDevices()).length,

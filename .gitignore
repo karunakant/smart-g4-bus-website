@@ -9,10 +9,11 @@ mosquitto/data/*
 mosquitto/log/*
 !mosquitto/log/.gitkeep
 
-# Runtime databases
+# Runtime databases & dynamic state
 data/*.sqlite3
 data/*.sqlite3-journal
 db/*.sqlite3-journal
+data/network.json
 
 # OS files
 Thumbs.db
